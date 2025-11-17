@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OpenLayers GeoJSON Example</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@7.4.0/ol.css">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ol@7.4.0/dist/ol.js"></script>
+<script>
+    // Create the OpenStreetMap basemap
+    const osmLayer = new ol.layer.Tile({
+        source: new ol.source.OSM()
+    });
+
+    // Create a vector layer for the GeoJSON
+    const geojsonLayer = new ol.layer.Vector({
+        source: new ol.source.Vector({
+            url: './h3_0_shifted.geojson',
+            format: new ol.format.GeoJSON()
+        }),
+        style: new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: '#ff6600',
+                width: 2
+            }),
+            fill: new ol.style.Fill({
+                color: 'rgba(255, 102, 0, 0.1)'
+            })
+        })
+    });
+
+    // Create the map
+    const map = new ol.Map({
+        target: 'map',
+        layers: [osmLayer, geojsonLayer],
+        view: new ol.View({
+            center: ol.proj.fromLonLat([0, 0]),
+            zoom: 0
+        })
+    });
+
+</script>
+</body>
+</html>

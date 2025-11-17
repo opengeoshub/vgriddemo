@@ -40,8 +40,11 @@ FileAttachment("isea9r_1.geojson").json()
 
 function _isea4r_1(FileAttachment){return(
   FileAttachment("isea4r_1.geojson").json()
-  )}      
-  
+  )} 
+
+function _h3_0_shifted(FileAttachment){return(
+  FileAttachment("h3_0_shifted.geojson").json()
+)}
 
 function _isea3h(FileAttachment){return(
 FileAttachment("isea3h.geojson").json()
@@ -300,6 +303,7 @@ export default function define(runtime, observer) {
     ["isea9r_centroids.geojson", {url: new URL("./files/isea9r_centroids.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea9r_1.geojson", {url: new URL("./files/isea9r_1.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea4r_1.geojson", {url: new URL("./files/isea4r_1.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["h3_0_shifted.geojson", {url: new URL("./files/h3_0_shifted.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea3h.geojson", {url: new URL("./files/isea3h.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea7h_1.geojson", {url: new URL("./files/isea7h_1.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea3h_1.geojson", {url: new URL("./files/isea3h_1.geojson", import.meta.url), mimeType: "application/json", toString}],
@@ -318,6 +322,7 @@ export default function define(runtime, observer) {
   main.variable(observer("isea9r_centroids")).define("isea9r_centroids", ["FileAttachment"], _isea9r_centroids);
   main.variable(observer("isea9r_1")).define("isea9r_1", ["FileAttachment"], _isea9r_1);
   main.variable(observer("isea4r_1")).define("isea4r_1", ["FileAttachment"], _isea4r_1);
+  main.variable(observer("h3_0_shifted")).define("h3_0_shifted", ["FileAttachment"], _h3_0_shifted);
   main.variable(observer("isea3h")).define("isea3h", ["FileAttachment"], _isea3h);
   main.variable(observer("isea7h_1")).define("isea7h_1", ["FileAttachment"], _isea7h_1);
   main.variable(observer("isea3h_1")).define("isea3h_1", ["FileAttachment"], _isea3h_1);

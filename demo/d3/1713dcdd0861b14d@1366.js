@@ -197,7 +197,8 @@ function mapcanvas(
     isea9r_centroids = null,
     isea9r_1 = null,
     isea4r_1 = null,
-    isea3h = null,
+    h3_0_shifted = null,
+    isea3h = null,    
     isea7h_1 = null,
     isea3h_1 = null,
     point = null,
@@ -241,18 +242,18 @@ function mapcanvas(
           context.fill();
       });
     }
-    if (isea9r && isea9r.features && Array.isArray(isea9r.features)) {
-      context.strokeStyle = "#ff0000";
-      context.lineWidth = 4
-      context.setLineDash([]);
-      isea9r.features.forEach(feature => {
-        if (feature && feature.geometry) {
-          context.beginPath();
-          path(feature);
-          context.stroke();
-        }
-      });
-    }
+    // if (isea9r && isea9r.features && Array.isArray(isea9r.features)) {
+    //   context.strokeStyle = "#ff0000";
+    //   context.lineWidth = 4
+    //   context.setLineDash([]);
+    //   isea9r.features.forEach(feature => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
     // if (isea3h && isea3h.features && Array.isArray(isea3h.features)) {
     //   context.strokeStyle = "#ff0000";
     //   context.lineWidth = 4;
@@ -340,10 +341,22 @@ function mapcanvas(
     //   });
     // }
     if (isea4r_1 && isea4r_1.features && Array.isArray(isea4r_1.features)) {
-      context.strokeStyle = "#0000ff";
+      context.strokeStyle = "red";
       context.lineWidth = 2;
       context.setLineDash([]);
       isea4r_1.features.forEach(feature => {
+        if (feature && feature.geometry) {
+          context.beginPath();
+          path(feature);
+          context.stroke();
+        }
+      });
+    }
+    if (h3_0_shifted && h3_0_shifted.features && Array.isArray(h3_0_shifted.features)) {
+      context.strokeStyle = "#0000ff";
+      context.lineWidth = 2;
+      context.setLineDash([]);
+      h3_0_shifted.features.forEach(feature => {
         if (feature && feature.geometry) {
           context.beginPath();
           path(feature);

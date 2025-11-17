@@ -1,12 +1,18 @@
 {
-    "layers": [
+    "layers": [       
         {
-            "name": "Antimeridian",
+            "name": "Antimeridian crossed",
             "file": "antimeridian.geojson",
             "color": "red",
             "width": 4,
             "lineType": "dash"
         },
+        {
+            "name": "Polygon crossed",
+            "file": "antimeridian_crossed.geojson",
+            "color": "#0000FF"
+        },
+
         {
             "name": "H3",
             "file": "h3_grid_0.geojson",
