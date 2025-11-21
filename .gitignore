@@ -5,7 +5,7 @@ data/geoparquet
 data/pop/vn_places/vn_places.dbf
 data/pop/vn_places/vn_places.geojson
 data/pop/vn_pop_h3_8.geojson
-demo/gars_grid_30_minutes.geojson
+dggs/gars_grid_30_minutes.geojson
 
 
 /data/antimeridian/test_data

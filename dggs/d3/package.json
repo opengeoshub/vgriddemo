@@ -1,0 +1,14 @@
+{
+  "name": "@fil/d3-projections",
+  "main": "12c53a59211622e5@418.js",
+  "version": "418.0.0",
+  "homepage": "https://observablehq.com/@fil/d3-projections",
+  "author": {
+    "name": "Fil",
+    "url": "https://observablehq.com/@fil"
+  },
+  "type": "module",
+  "peerDependencies": {
+    "@observablehq/runtime": "4 - 5"
+  }
+}

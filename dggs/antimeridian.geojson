@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Antimeridian",
+        "description": "The line of longitude at 180 degrees, opposite to the Prime Meridian"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [180, 90],
+          [180, -90]
+        ]
+      }
+    }
+  ]
+}
+

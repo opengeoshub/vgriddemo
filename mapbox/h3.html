@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>vgrid-mapbox Demo</title>
+
+    <!-- Mapbox GL JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css" rel="stylesheet" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+
+        .projection-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+            width: 180px;
+        }
+
+        .projection-panel label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .projection-panel select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .projection-panel select:hover {
+            border-color: #999;
+        }
+
+        .projection-panel select:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+        }
+
+        .projection-panel button {
+            width: 100%;
+            margin-top: 12px;
+            padding: 8px 12px;
+            border: 1px solid #0066cc;
+            border-radius: 4px;
+            font-size: 14px;
+            background: #0066cc;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .projection-panel button:hover {
+            background: #0052a3;
+            border-color: #0052a3;
+        }
+
+        .projection-panel button:active {
+            background: #003d7a;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div class="projection-panel">
+        <label for="projection-select">Projection:</label>
+        <select id="projection-select">
+            <option value="equalEarth">Equal Earth</option>
+            <option value="albers">Albers</option>
+            <option value="mercator">Mercator</option>
+            <option value="lambertConformalConic">Lambert Conformal Conic</option>
+            <option value="winkelTripel">Winkel Tripel</option>
+            <option value="naturalEarth">Natural Earth</option>
+            <option value="equirectangular">Equirectangular</option>
+            <option value="globe">Globe</option>
+        </select>
+        <button onclick="exportToGeoJSON()">Export to GeoJSON</button>
+    </div>
+    <script type="module">
+        import H3Grid from "https://unpkg.com/vgrid-maplibre/H3/H3Grid.js";
+
+        // 🔑 Add your Mapbox access token
+        mapboxgl.accessToken = "pk.eyJ1IjoidGhhbmdxZCIsImEiOiJucHFlNFVvIn0.j5yb-N8ZR3d4SJAYZz-TZA";
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'https://raw.githubusercontent.com/opengeoshub/vstyles/main/versatiles/eclipse.json',
+            center: [0, 0],
+            zoom: 1.2,
+            projection: { name: 'equalEarth' }
+        });
+        map.addControl(new mapboxgl.NavigationControl())
+
+        function addIcosaLayer() {
+            map.addSource('icosahedron', {
+                type: 'geojson',
+                // Fetch GeoJSON from the URL
+                data: 'https://raw.githubusercontent.com/opengeoshub/vgrid-maplibre/main/H3/icosahedron.geojson'
+                // data: 'https://raw.githubusercontent.com/opengeoshub/vgrid-maplibre/main/H3/icosahedron_polygon.geojson'
+
+            });
+            // Add the layer to display the GeoJSON features
+            map.addLayer({
+                id: 'icosahedron-layer',
+                type: 'line',
+                // type: 'fill',  
+                source: 'icosahedron',  // The source we added above
+                paint: {
+                    'line-color': 'white',  // Line color (if using 'line' layer)
+                    'line-width': 1.5,       // Line width
+                    'line-dasharray': [2, 4, 1, 4]  // Dash-dot pattern: [dash length, gap length, dash length, gap length]
+                    // 'fill-color': 'transparent',         // Fill color
+                    // 'fill-outline-color': '#008000'  // Border/Outline color
+                }
+            });
+        }
+
+        // Projection list
+        const projections = [
+            { name: "equalEarth", value: "equalEarth" },
+            { name: "albers", value: "albers" },
+            { name: "mercator", value: "mercator" },
+            { name: "lambertConformalConic", value: "lambertConformalConic" },
+            { name: "winkelTripel", value: "winkelTripel" },
+            { name: "naturalEarth", value: "naturalEarth" },
+            { name: "equirectangular", value: "equirectangular" },
+            { name: "globe", value: "globe" }
+        ];
+
+        // Set initial projection in dropdown
+        const projectionSelect = document.getElementById('projection-select');
+        projectionSelect.value = 'equalEarth';
+
+        // Handle projection change
+        projectionSelect.addEventListener('change', (e) => {
+            const selectedProjection = e.target.value;
+            map.setProjection({ name: selectedProjection });
+        });
+
+        map.on('load', () => {
+            const h3Grid = new H3Grid(map, {
+                color: 'rgba(255, 0, 0, 1)',
+                width: 1.5,
+                redraw: 'moveend',
+            });
+            addIcosaLayer();
+        });
+        map.on('click', (e) => {
+            const features = map.queryRenderedFeatures(e.point, {
+                layers: ['h3-grid-layer']  // This should match the layer name where hexagons are rendered
+            });
+
+            if (features.length) {
+                const feature = features[0];  // Select the first feature if there are multiple
+
+                // Create a popup with the feature properties
+                const popupContent = `
+            <strong>H3 ID: </strong> ${feature.properties.h3_id} <br>
+            <strong>Resolution: </strong> ${feature.properties.resolution} <br>
+            <strong>Icosa Faces: </strong> ${feature.properties.icosa_faces} <br>
+            <strong>Area (${feature.properties.area_unit}): </strong> ${feature.properties.area}  <br>
+            <strong>Total Cells: </strong> ${feature.properties.num_hex}<br>
+            `;
+                // Create a popup and set its coordinates
+                const popup = new mapboxgl.Popup()
+                    .setLngLat(e.lngLat)  // Position the popup at the clicked location
+                    .setHTML(popupContent) // Set the HTML content for the popup
+                    .addTo(map);  // Add the popup to the map
+
+                currentPopup = popup;
+
+                // Add a highlight layer if it doesn't exist yet
+                if (!map.getLayer('highlight-layer')) {
+                    map.addLayer({
+                        'id': 'highlight-layer',
+                        'type': 'fill',
+                        'source': {
+                            'type': 'geojson',
+                            'data': {
+                                'type': 'FeatureCollection',
+                                'features': []
+                            }
+                        },
+                        'paint': {
+                            'fill-color': 'rgba(255, 0, 0)', // Red color for highlight
+                            'fill-opacity': 0.2,  // Set transparency of the highlight
+                        }
+                    });
+                }
+
+                // Update the source of the highlight layer with the clicked feature's geometry
+                map.getSource('highlight-layer').setData({
+                    'type': 'FeatureCollection',
+                    'features': [feature]
+                });
+            }
+        });
+        function exportToGeoJSON() {
+            const features = map.queryRenderedFeatures({ layers: ['h3-grid-layer'] });
+
+            if (!features.length) {
+                alert("No H3 grid features found in the current viewport.");
+                return;
+            }
+
+            // Remove duplicates (some tiles can appear multiple times)
+            // const uniqueFeatures = Array.from(new Map(
+            //     features.map(f => [f.properties.h3_id, f])
+            // ).values());
+
+            const geojson = {
+                type: 'FeatureCollection',
+                features: features
+            };
+
+            // Download as GeoJSON file
+            const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'h3-grid-export.geojson';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        window.exportToGeoJSON = exportToGeoJSON;
+    </script>
+</body>
+
+</html>
