@@ -2,10 +2,7 @@
 data/geoparquet
 
 # Large data files to ignore
-data/pop/vn_places/vn_places.dbf
-data/pop/vn_places/vn_places.geojson
-data/pop/vn_pop_h3_8.geojson
+pop/vn_places/vn_places.dbf
+pop/vn_places/vn_places.geojson
+pop/vn_pop_h3_8.geojson
 dggs/gars_grid_30_minutes.geojson
-
-
-/data/antimeridian/test_data
