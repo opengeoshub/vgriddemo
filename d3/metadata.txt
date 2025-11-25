@@ -1,0 +1,5 @@
+https://www.michaelbeeson.com/interests/Cartography/References/ElementsOfMapProjection.pdf
+https://www.jasondavies.com/maps/transition/
+man_head: https://gist.github.com/awoodruff/9216081
+woman_head: https://observablehq.com/@cezarmocan/projection-transitions
+https://gist.github.com/mbostock/3711652

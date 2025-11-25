@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Composite Map Projections with D3.js</title>
+    <!-- Load D3.js and dependencies via regular script tags to avoid CSP issues -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/d3-geo-projection.v3.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script> -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #map-container {
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            min-width: 250px;
+            backdrop-filter: blur(10px);
+        }
+
+        #controls h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        #controls label {
+            display: block;
+            margin: 8px 0 4px 0;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        #controls select {
+            width: 100%;
+            padding: 6px;
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 11px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        #info div {
+            margin: 4px 0;
+        }
+
+        .country {
+            fill: #2d5a3d;
+            stroke: #1a3a26;
+            stroke-width: 0.5;
+        }
+
+        .graticule {
+            fill: none;
+            stroke: #444;
+            stroke-width: 1;
+            opacity: 0.8;
+        }
+
+        .graticule-outline {
+            fill: none;
+            stroke: #666;
+            stroke-width: 1;
+            opacity: 0.8;
+        }
+
+        .projection-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="map-container"></div>
+        
+        <div id="controls">
+            <h2>Map Controls</h2>
+            <label for="projection-select">World Map Projection:</label>
+            <select id="projection-select">
+                <option value="naturalEarth">Natural Earth</option>
+                <option value="robinson">Robinson</option>
+                <option value="mollweide">Mollweide</option>
+                <option value="eckert4">Eckert IV</option>
+                <option value="sinusoidal">Sinusoidal</option>
+                <option value="cylindricalEqualArea">Cylindrical Equal Area</option>
+            </select>
+            <label for="show-graticule" style="margin-top: 10px;">
+                <input type="checkbox" id="show-graticule" checked> Show Graticule
+            </label>
+        </div>
+
+        <div id="projection-indicator" class="projection-indicator">
+            <div><strong>Current Projection:</strong></div>
+            <div id="current-projection">Natural Earth</div>
+        </div>
+
+        <div id="info">
+            <div><strong>Zoom:</strong> <span id="zoom-level">1.0</span></div>
+            <div><strong>Center:</strong> <span id="center-coords">0°, 0°</span></div>
+            <div style="margin-top: 8px; font-size: 10px; color: #888;">
+                Scroll to zoom • Drag to pan • Double-click to reset
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Access modules from global scope (loaded via script tags)
+        // Note: versor-zooming may not be available as UMD, so we'll use a fallback
+        const d3 = window.d3;
+        const topojson = window.topojson;
+        const versor = window.versor;
+        
+        // Try to get versor-zooming, but it may not be available
+        let versorZoom;
+        try {
+            // @d3/versor-zooming might need to be loaded differently
+            // For now, we'll implement a versor-based zoom ourselves
+            versorZoom = null; // Will use fallback
+        } catch (e) {
+            console.warn('Versor-zooming not available, using fallback');
+        }
+        
+        // Adaptive Composite Map Projection with D3.js
+        class AdaptiveCompositeMap {
+            constructor(container) {
+                this.container = container;
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                
+                // Map state
+                this.scale = 100;
+                this.center = [0, 0];
+                this.worldProjection = 'naturalEarth';
+                this.showGraticule = true;
+                
+                // Projection thresholds based on schema
+                // Zoom factor = scale / 100
+                // Natural Earth: zoom 1-2.5 (scale 100-250)
+                // Lambert Azimuthal oblique: zoom 2-6 (scale 200-600)
+                // Lambert Azimuthal polar: zoom 2-13 (scale 200-1300), lat greater than 75°
+                // Albers Conic: zoom 6-14 (scale 600-1400), lat 20°-75°
+                // Lambert Cylindrical: zoom 6-14 (scale 600-1400), lat 0°-20°
+                // Mercator: zoom 14-16 (scale 1400-1600)
+                
+                this.init();
+            }
+
+            init() {
+                // Create SVG
+                this.svg = d3.select(this.container)
+                    .append('svg')
+                    .attr('width', this.width)
+                    .attr('height', this.height);
+
+                // Create main group for map
+                this.g = this.svg.append('g');
+
+                // Setup controls first
+                this.setupControls();
+                
+                // Track if interactions are setup
+                this.interactionsSetup = false;
+                
+                // Load world map data (this will call updateProjection and render)
+                this.loadWorldMap();
+            }
+
+            loadWorldMap() {
+                // Use Natural Earth data (110m resolution)
+                const url = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+                
+                console.log('Loading world map data from:', url);
+                
+                d3.json(url).then(world => {
+                    console.log('World map data loaded successfully');
+                    this.worldData = world;
+                    this.countries = topojson.feature(world, world.objects.countries);
+                    this.updateProjection();
+                    this.render();
+                    // Setup interactions after successful render
+                    setTimeout(() => {
+                        if (!this.interactionsSetup) {
+                            this.setupInteractions();
+                            this.interactionsSetup = true;
+                        }
+                    }, 100);
+                }).catch(err => {
+                    console.error('Error loading world map:', err);
+                    // Fallback: create a simple graticule-only map
+                    this.countries = null; // No countries data
+                    this.updateProjection();
+                    this.render();
+                    // Setup interactions after fallback render
+                    setTimeout(() => {
+                        if (!this.interactionsSetup) {
+                            this.setupInteractions();
+                            this.interactionsSetup = true;
+                        }
+                    }, 100);
+                });
+            }
+
+            getProjection() {
+                const zoomFactor = this.scale / 100;
+                const centerLat = Math.abs(this.center[1]); // Use absolute latitude
+                
+                // Determine which projection to use based on zoom and center latitude
+                // Following the adaptive composite map projection schema
+                let projection;
+                
+                // Mercator: zoom 14-16 (scale 1400-1600), all latitudes
+                if (zoomFactor >= 14) {
+                    projection = d3.geoMercator()
+                        .scale(this.scale)
+                        .center(this.center)
+                        .translate([this.width / 2, this.height / 2]);
+                    this.currentProjectionName = 'Mercator';
+                    
+                // Albers Conic: zoom 6-14 (scale 600-1400), latitude 20°-75°
+                } else if (zoomFactor >= 6 && centerLat >= 20 && centerLat < 75) {
+                    // Calculate standard parallels at 1/6 and 5/6 of the visible central meridian
+                    // For simplicity, use fixed standard parallels based on center latitude
+                    const stdParallel1 = centerLat - 15;
+                    const stdParallel2 = centerLat + 15;
+                    
+                    projection = d3.geoAlbers()
+                        .parallels([Math.max(-85, stdParallel1), Math.min(85, stdParallel2)])
+                        .scale(this.scale)
+                        .center(this.center)
+                        .translate([this.width / 2, this.height / 2]);
+                    this.currentProjectionName = 'Albers Conic Equal Area';
+                    
+                // Lambert Cylindrical: zoom 6-14 (scale 600-1400), latitude 0°-20°
+                } else if (zoomFactor >= 6 && centerLat < 20) {
+                    if (typeof d3.geoCylindricalEqualArea === 'function') {
+                        projection = d3.geoCylindricalEqualArea()
+                            .scale(this.scale)
+                            .center(this.center)
+                            .translate([this.width / 2, this.height / 2]);
+                        this.currentProjectionName = 'Lambert Cylindrical Equal Area';
+                    } else {
+                        // Fallback to Equirectangular
+                        projection = d3.geoEquirectangular()
+                            .scale(this.scale)
+                            .center(this.center)
+                            .translate([this.width / 2, this.height / 2]);
+                        this.currentProjectionName = 'Equirectangular';
+                    }
+                    
+                // Lambert Azimuthal polar: zoom 2-13 (scale 200-1300), latitude greater than 75°
+                } else if (zoomFactor >= 2 && centerLat >= 75) {
+                    projection = d3.geoAzimuthalEqualArea()
+                        .scale(this.scale)
+                        .center(this.center)
+                        .translate([this.width / 2, this.height / 2]);
+                    this.currentProjectionName = 'Lambert Azimuthal Equal Area (Polar)';
+                    
+                // Lambert Azimuthal oblique: zoom 2-6 (scale 200-600), latitude < 75°
+                } else if (zoomFactor >= 2 && centerLat < 75) {
+                    projection = d3.geoAzimuthalEqualArea()
+                        .scale(this.scale)
+                        .center(this.center)
+                        .translate([this.width / 2, this.height / 2]);
+                    this.currentProjectionName = 'Lambert Azimuthal Equal Area (Oblique)';
+                    
+                // Natural Earth: zoom 1-2.5 (scale 100-250), with curved boundary
+                // The curved boundary: at zoom 2, up to ~68° latitude; at zoom 1, all latitudes
+                } else {
+                    // Check if we're within the Natural Earth region
+                    // Curved boundary: at zoom 1, all latitudes; at zoom 2, up to 68°; linear interpolation
+                    // Formula: maxLat = 68° * (zoomFactor - 1) when zoomFactor >= 1 and <= 2
+                    // At zoomFactor > 2, use 68° as max
+                    let maxLatForZoom = 90; // Default to all latitudes
+                    if (zoomFactor >= 1 && zoomFactor <= 2) {
+                        maxLatForZoom = 68 * (zoomFactor - 1);
+                    } else if (zoomFactor > 2 && zoomFactor <= 2.5) {
+                        maxLatForZoom = 68;
+                    }
+                    const useNaturalEarth = zoomFactor <= 2.5 && centerLat <= maxLatForZoom;
+                    
+                    if (useNaturalEarth) {
+                        // Small scale: Use world map projection
+                        switch(this.worldProjection) {
+                            case 'naturalEarth':
+                                projection = d3.geoNaturalEarth1()
+                                    .scale(this.scale)
+                                    .center(this.center)
+                                    .translate([this.width / 2, this.height / 2]);
+                                this.currentProjectionName = 'Natural Earth';
+                                break;
+                            case 'robinson':
+                                if (typeof d3.geoRobinson === 'function') {
+                                    projection = d3.geoRobinson()
+                                        .scale(this.scale)
+                                        .center(this.center)
+                                        .translate([this.width / 2, this.height / 2]);
+                                    this.currentProjectionName = 'Robinson';
+                                } else {
+                                    projection = d3.geoNaturalEarth1()
+                                        .scale(this.scale)
+                                        .center(this.center)
+                                        .translate([this.width / 2, this.height / 2]);
+                                    this.currentProjectionName = 'Natural Earth (Robinson unavailable)';
+                                }
+                                break;
+                            case 'mollweide':
+                                projection = d3.geoMollweide()
+                                    .scale(this.scale)
+                                    .center(this.center)
+                                    .translate([this.width / 2, this.height / 2]);
+                                this.currentProjectionName = 'Mollweide';
+                                break;
+                            case 'eckert4':
+                                if (typeof d3.geoEckert4 === 'function') {
+                                    projection = d3.geoEckert4()
+                                        .scale(this.scale)
+                                        .center(this.center)
+                                        .translate([this.width / 2, this.height / 2]);
+                                    this.currentProjectionName = 'Eckert IV';
+                                } else {
+                                    projection = d3.geoMollweide()
+                                        .scale(this.scale)
+                                        .center(this.center)
+                                        .translate([this.width / 2, this.height / 2]);
+                                    this.currentProjectionName = 'Mollweide (Eckert IV unavailable)';
+                                }
+                                break;
+                            case 'sinusoidal':
+                                projection = d3.geoSinusoidal()
+                                    .scale(this.scale)
+                                    .center(this.center)
+                                    .translate([this.width / 2, this.height / 2]);
+                                this.currentProjectionName = 'Sinusoidal';
+                                break;
+                            case 'cylindricalEqualArea':
+                                if (typeof d3.geoCylindricalEqualArea === 'function') {
+                                    projection = d3.geoCylindricalEqualArea()
+                                        .scale(this.scale)
+                                        .center(this.center)
+                                        .translate([this.width / 2, this.height / 2]);
+                                    this.currentProjectionName = 'Cylindrical Equal Area';
+                                } else {
+                                    projection = d3.geoEquirectangular()
+                                        .scale(this.scale)
+                                        .center(this.center)
+                                        .translate([this.width / 2, this.height / 2]);
+                                    this.currentProjectionName = 'Equirectangular (Cylindrical Equal Area unavailable)';
+                                }
+                                break;
+                            default:
+                                projection = d3.geoNaturalEarth1()
+                                    .scale(this.scale)
+                                    .center(this.center)
+                                    .translate([this.width / 2, this.height / 2]);
+                                this.currentProjectionName = 'Natural Earth';
+                        }
+                    } else {
+                        // Fallback to Lambert Azimuthal if outside Natural Earth region
+                        projection = d3.geoAzimuthalEqualArea()
+                            .scale(this.scale)
+                            .center(this.center)
+                            .translate([this.width / 2, this.height / 2]);
+                        this.currentProjectionName = 'Lambert Azimuthal Equal Area';
+                    }
+                }
+                
+                return projection;
+            }
+
+            updateProjection() {
+                this.projection = this.getProjection();
+                this.path = d3.geoPath().projection(this.projection);
+                
+                // Update projection indicator
+                d3.select('#current-projection').text(this.currentProjectionName);
+            }
+
+            render() {
+                if (!this.projection) {
+                    console.warn('Cannot render: projection not initialized');
+                    return;
+                }
+
+                // Clear existing map
+                this.g.selectAll('*').remove();
+
+                // Draw countries first (so graticule appears on top)
+                if (this.countries) {
+                    this.g.selectAll('.country')
+                        .data(this.countries.features)
+                        .enter()
+                        .append('path')
+                        .attr('class', 'country')
+                        .attr('d', this.path);
+                }
+
+                // Draw graticule on top of countries
+                if (this.showGraticule) {
+                    const graticule = d3.geoGraticule();
+                    
+                    this.g.append('path')
+                        .datum(graticule)
+                        .attr('class', 'graticule')
+                        .attr('d', this.path);
+
+                    this.g.append('path')
+                        .datum(graticule.outline())
+                        .attr('class', 'graticule-outline')
+                        .attr('d', this.path);
+                }
+
+                // Update info
+                d3.select('#zoom-level').text((this.scale / 100).toFixed(2));
+                d3.select('#center-coords').text(
+                    `${this.center[0].toFixed(1)}°, ${this.center[1].toFixed(1)}°`
+                );
+            }
+
+            setupInteractions() {
+                if (!this.projection) {
+                    console.warn('Projection not initialized yet, retrying...');
+                    setTimeout(() => this.setupInteractions(), 100);
+                    return;
+                }
+                
+                console.log('Setting up interactions...');
+                
+                // Check if versor is available for smooth rotation
+                if (typeof versor !== 'undefined') {
+                    try {
+                        // Use versor for smooth drag, zoom, and rotation
+                        // Create a temporary orthographic projection for versor calculations
+                        const tempProjection = d3.geoOrthographic()
+                            .scale(this.scale)
+                            .translate([this.width / 2, this.height / 2]);
+                        
+                        // Convert center to rotation for versor
+                        const centerToRotation = (center) => [-center[0], -center[1], 0];
+                        const rotationToCenter = (rotation) => [-rotation[0], -rotation[1]];
+                        
+                        // Initialize rotation from current center
+                        let currentRotation = centerToRotation(this.center);
+                        tempProjection.rotate(currentRotation);
+                        
+                        const self = this;
+                        let v0, q0; // Store initial state for drag
+                        
+                        // Create versor-based zoom behavior using D3 zoom
+                        const zoomBehavior = d3.zoom()
+                        .scaleExtent([0.5, 20])
+                        .on("start", (event) => {
+                            // Store initial state when drag starts
+                            if (event.sourceEvent && self.projection) {
+                                try {
+                                    const [x, y] = d3.pointer(event.sourceEvent, self.svg.node());
+                                    v0 = versor.cartesian(tempProjection.invert([x, y]));
+                                    q0 = versor(currentRotation);
+                                } catch (e) {
+                                    console.error('Error in zoom start:', e);
+                                }
+                            }
+                        })
+                        .on("zoom", (event) => {
+                            if (!self.projection) return;
+                            
+                            try {
+                                // Handle rotation via drag using versor math
+                                if (event.sourceEvent && event.sourceEvent.type === 'mousemove' && v0) {
+                                    const [x, y] = d3.pointer(event.sourceEvent, self.svg.node());
+                                    tempProjection.rotate(currentRotation);
+                                    const v1 = versor.cartesian(tempProjection.invert([x, y]));
+                                    const q1 = versor.multiply(q0, versor.delta(v0, v1));
+                                    const [λ, φ] = versor.rotation(q1);
+                                    
+                                    // Update rotation and convert to center
+                                    currentRotation = [λ * 180 / Math.PI, φ * 180 / Math.PI, 0];
+                                    self.center = rotationToCenter(currentRotation);
+                                }
+                                
+                                // Handle zoom
+                                self.scale = event.transform.k * 100;
+                                
+                                // For wheel zoom, adjust center towards mouse position
+                                if (event.sourceEvent && event.sourceEvent.type === 'wheel') {
+                                    const [mx, my] = d3.pointer(event.sourceEvent, self.svg.node());
+                                    const [lon, lat] = self.projection.invert([mx, my]);
+                                    
+                                    if (lon !== null && lat !== null && !isNaN(lon) && !isNaN(lat)) {
+                                        const scaleRatio = event.transform.k;
+                                        self.center[0] = lon + (self.center[0] - lon) / scaleRatio;
+                                        self.center[1] = lat + (self.center[1] - lat) / scaleRatio;
+                                        currentRotation = centerToRotation(self.center);
+                                    }
+                                }
+                                
+                                // Update temp projection for next interaction
+                                tempProjection.scale(self.scale).rotate(currentRotation);
+                                
+                                self.updateProjection();
+                                self.render();
+                            } catch (e) {
+                                console.error('Error in zoom handler:', e);
+                            }
+                        })
+                        .on("end", () => {
+                            v0 = q0 = null;
+                        });
+
+                        // Apply zoom behavior to the SVG
+                        this.svg.call(zoomBehavior);
+                        console.log('Versor-based interactions setup complete');
+                        
+                        // Store zoomBehavior for double-click reset
+                        this.zoomBehavior = zoomBehavior;
+                        return; // Success, exit early
+                    } catch (e) {
+                        console.error('Error setting up versor interactions:', e);
+                        // Fall through to fallback
+                    }
+                }
+                
+                // Fallback to basic interactions if versor not available or failed
+                console.log('Using basic interactions (fallback)');
+                this.setupBasicInteractions();
+
+                // Double-click to reset (always available)
+                this.svg.on('dblclick', () => {
+                    this.scale = 100;
+                    this.center = [0, 0];
+                    this.updateProjection();
+                    this.render();
+                    // Reset zoom transform if available
+                    if (this.zoomBehavior) {
+                        this.svg.transition()
+                            .duration(750)
+                            .call(this.zoomBehavior.transform, d3.zoomIdentity);
+                    }
+                });
+
+                // Handle window resize (always available)
+                window.addEventListener('resize', () => {
+                    this.width = window.innerWidth;
+                    this.height = window.innerHeight;
+                    this.svg.attr('width', this.width).attr('height', this.height);
+                    this.updateProjection();
+                    this.render();
+                });
+            }
+            
+            setupBasicInteractions() {
+                // Fallback basic interactions if versor-zooming fails
+                console.log('Setting up basic interactions (fallback)');
+                const self = this;
+                
+                // Basic drag for panning
+                const drag = d3.drag()
+                    .on('drag', (event) => {
+                        if (!self.projection) return;
+                        const [x, y] = d3.pointer(event, self.svg.node());
+                        const [lon, lat] = self.projection.invert([x, y]);
+                        if (lon !== null && lat !== null && !isNaN(lon) && !isNaN(lat)) {
+                            // Simple panning - adjust center based on drag
+                            const dx = event.dx;
+                            const dy = event.dy;
+                            const [lon1, lat1] = self.projection.invert([self.width / 2, self.height / 2]);
+                            const [lon2, lat2] = self.projection.invert([self.width / 2 - dx, self.height / 2 - dy]);
+                            if (lon2 !== null && lat2 !== null) {
+                                self.center[0] += (lon2 - lon1);
+                                self.center[1] += (lat2 - lat1);
+                                self.updateProjection();
+                                self.render();
+                            }
+                        }
+                    });
+                
+                self.g.call(drag);
+                
+                // Basic wheel zoom
+                self.svg.on('wheel', (event) => {
+                    event.preventDefault();
+                    if (!self.projection) return;
+                    const [mx, my] = d3.pointer(event, self.svg.node());
+                    const [lon, lat] = self.projection.invert([mx, my]);
+                    if (lon !== null && lat !== null && !isNaN(lon) && !isNaN(lat)) {
+                        const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
+                        const newScale = Math.max(50, Math.min(2000, self.scale * zoomFactor));
+                        const scaleRatio = newScale / self.scale;
+                        self.center[0] = lon + (self.center[0] - lon) / scaleRatio;
+                        self.center[1] = lat + (self.center[1] - lat) / scaleRatio;
+                        self.scale = newScale;
+                        self.updateProjection();
+                        self.render();
+                    }
+                });
+            }
+
+            setupControls() {
+                // Projection selector
+                const self = this;
+                d3.select('#projection-select')
+                    .on('change', function(event) {
+                        self.worldProjection = this.value;
+                        
+                        // If currently zoomed in beyond Natural Earth threshold (zoom 2.5 = scale 250),
+                        // zoom out to show the world projection
+                        const zoomFactor = self.scale / 100;
+                        if (zoomFactor > 2.5) {
+                            // Zoom out to world view to show the selected projection
+                            self.scale = 250; // zoom factor 2.5
+                            self.center = [0, 0]; // Reset to center
+                        }
+                        
+                        // Always update and render
+                        self.updateProjection();
+                        self.render();
+                    });
+
+                // Graticule toggle
+                d3.select('#show-graticule')
+                    .on('change', function(event) {
+                        self.showGraticule = this.checked;
+                        self.render();
+                    });
+            }
+        }
+
+        // Initialize the map when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check if all required libraries are loaded
+            if (typeof d3 === 'undefined') {
+                console.error('D3.js not loaded');
+                return;
+            }
+            if (typeof topojson === 'undefined') {
+                console.error('TopoJSON not loaded');
+                return;
+            }
+            // Versor is optional - will use fallback if not available
+            if (typeof versor === 'undefined') {
+                console.warn('Versor not loaded, will use basic interactions');
+            }
+            
+            const map = new AdaptiveCompositeMap('#map-container');
+        });
+    </script>
+	</body>
+</html>
