@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "antimeridian_minus",
+"features": [
+{ "type": "Feature", "properties": { "name": "-180 Antimeridian" }, "geometry": { "type": "LineString", "coordinates": [ [ -180.0, -90.0 ], [ -180.0, 90.0 ] ] } }
+]
+}

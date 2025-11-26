@@ -1,0 +1,64 @@
+<html>
+  <head>
+    <!-- deck.gl standalone bundle -->
+    <script src="https://unpkg.com/deck.gl@^9.0.0-beta.2/dist.min.js"></script>
+
+    <style type="text/css">
+      body {margin: 0; padding: 0;}
+      #container {width: 100vw; height: 100vh;}
+    </style>
+  </head>
+
+  <body>
+    <div id="container"></div>
+  </body>
+
+  <script type="text/javascript">
+
+const H3_ORIGIN = 'h3_0_origin.geojson';
+const COUNTRIES =
+  'https://raw.githubusercontent.com/opengeoshub/vopendata/refs/heads/main/shape/world_countries.geojson';
+
+const deckgl = new deck.DeckGL({
+  container: 'container',
+  // views: [
+  //   new deck.MapView({projection: 'mollweide'})
+  // ],
+
+  initialViewState: {
+    latitude: 30,
+    longitude: 0,
+    zoom: 1.5,
+    bearing: 0,
+    pitch: 30
+  },
+  controller: true,
+  getTooltip: ({object}) => object && `H3 index: ${object.properties.h3}`,
+
+  layers: [
+    new deck.GeoJsonLayer({
+      id: 'countries',
+      data: COUNTRIES,
+      stroked: true,
+      filled: false,
+      // wrapLongitude: true,
+      lineWidthMinPixels: 1,
+      getLineColor: [180, 180, 180, 200],
+      pickable: false
+    }),
+    new deck.GeoJsonLayer({
+      id: 'h3-origin',
+      data: H3_ORIGIN,
+      stroked: true,
+      filled: true,
+      wrapLongitude: true,
+      lineWidthMinPixels: 1,
+      getLineColor: [40, 80, 180],
+      getFillColor: [0, 128, 255, 100],
+      // pickable: true,
+      autoHighlight: true
+    })
+  ]
+});
+  </script>
+</html>

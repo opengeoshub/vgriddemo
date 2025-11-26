@@ -24,7 +24,7 @@
 <script>
     const map = new maplibregl.Map({
         container: 'map',
-        style: 'https://demotiles.maplibre.org/style.json',
+        style: 'https://raw.githubusercontent.com/opengeoshub/vstyles/main/versatiles/graybeard.json',
         center: [0, 0],
         zoom: 0
     });
@@ -32,25 +32,25 @@
     map.on('load', () => {
         map.addSource('antimeridian-geojson', {
             type: 'geojson',
-            data: './h3_0_shifted.geojson'
+            data: './h3_0_splitted.geojson'
         });
 
-        map.addLayer({
-            id: 'antimeridian-fill',
-            type: 'fill',
-            source: 'antimeridian-geojson',
-            paint: {
-                'fill-color': '#ff6600',
-                'fill-opacity': 0.1
-            }
-        });
+        // map.addLayer({
+        //     id: 'antimeridian-fill',
+        //     type: 'fill',
+        //     source: 'antimeridian-geojson',
+        //     paint: {
+        //         'fill-color': 'red',
+        //         'fill-opacity': 0
+        //     }
+        // });
 
         map.addLayer({
             id: 'antimeridian-outline',
             type: 'line',
             source: 'antimeridian-geojson',
             paint: {
-                'line-color': '#ff6600',
+                'line-color': 'red',
                 'line-width': 2
             }
         });

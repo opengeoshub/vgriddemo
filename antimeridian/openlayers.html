@@ -30,13 +30,13 @@
     // Create a vector layer for the GeoJSON
     const geojsonLayer = new ol.layer.Vector({
         source: new ol.source.Vector({
-            url: './h3_0_shifted.geojson',
+            url: './h3_0_splitted.geojson',
             format: new ol.format.GeoJSON()
         }),
         style: new ol.style.Style({
             stroke: new ol.style.Stroke({
-                color: '#ff6600',
-                width: 2
+                color: 'red',
+                width: 3
             }),
             fill: new ol.style.Fill({
                 color: 'rgba(255, 102, 0, 0.1)'

@@ -33,7 +33,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 // Load GeoJSON file
-fetch('./h3_0_shifted.geojson')
+fetch('./h3_0_east_shifted.geojson')
     .then(response => response.json())
     .then(data => {
         var geoLayer = L.geoJSON(data, {

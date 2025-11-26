@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>vgrid-maplibre Demo</title>
+
+    <!-- MapLibre GL JS -->
+    <script src="https://unpkg.com/maplibre-gl@5.4.0/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@5.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://raw.githubusercontent.com/opengeoshub/vstyles/main/versatiles/eclipse.json',
+            center: [0, 0],
+            zoom: 1.2,
+            projection: { name: 'equalEarth' }
+        });
+        map.addControl(new maplibregl.NavigationControl());
+
+        function addH3OriginLayer() {
+            map.addSource('h3-origin', {
+                type: 'geojson',
+                data: '../deckgl/h3_0_origin.geojson'
+            });
+
+            map.addLayer({
+                id: 'h3-origin-fill',
+                type: 'fill',
+                source: 'h3-origin',
+                paint: {
+                    'fill-color': 'rgba(0, 128, 255, 0.2)',
+                    'fill-outline-color': 'rgba(0, 128, 255, 0.7)'
+                }
+            });
+
+            map.addLayer({
+                id: 'h3-origin-outline',
+                type: 'line',
+                source: 'h3-origin',
+                paint: {
+                    'line-color': 'rgba(0, 128, 255, 0.9)',
+                    'line-width': 1.5
+                }
+            });
+        }
+
+        map.on('load', () => {
+            addH3OriginLayer();
+        });
+
+        map.on('click', (e) => {
+            const features = map.queryRenderedFeatures(e.point, {
+                layers: ['h3-origin-fill']
+            });
+
+            if (features.length) {
+                const feature = features[0];
+                const popupContent = `
+            <strong>H3 ID: </strong> ${feature.properties.h3_id} <br>
+            <strong>Resolution: </strong> ${feature.properties.resolution} <br>
+            <strong>Icosa Faces: </strong> ${feature.properties.icosa_faces} <br>
+            <strong>Area (${feature.properties.area_unit}): </strong> ${feature.properties.area}  <br>
+            <strong>Total Cells: </strong> ${feature.properties.num_hex}<br>
+            `;
+
+                const popup = new maplibregl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML(popupContent)
+                    .addTo(map);
+
+                if (!map.getLayer('highlight-layer')) {
+                    map.addLayer({
+                        'id': 'highlight-layer',
+                        'type': 'fill',
+                        'source': {
+                            'type': 'geojson',
+                            'data': {
+                                'type': 'FeatureCollection',
+                                'features': []
+                            }
+                        },
+                        'paint': {
+                            'fill-color': 'rgba(255, 0, 0)',
+                            'fill-opacity': 0.2,
+                        }
+                    });
+                }
+
+                map.getSource('highlight-layer').setData({
+                    'type': 'FeatureCollection',
+                    'features': [feature]
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
+
