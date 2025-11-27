@@ -1,6 +1,6 @@
 <html>
   <head>
-    <script src="https://unpkg.com/deck.gl@^9.0.0-beta.2/dist.min.js"></script>
+    <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style type="text/css">
       body {margin: 0; padding: 0; background: #111; font-family: Helvetica, Arial, sans-serif;}
@@ -88,7 +88,7 @@ fetch(DATA_URL)
 function cycleProjection() {
   if (!dataCache) {
     return;
-  }
+  } 
 
   const projectionName = PROJECTIONS[(projectionIndex++) % PROJECTIONS.length];
   document.getElementById('name').innerHTML =

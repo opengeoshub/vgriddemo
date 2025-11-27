@@ -7,7 +7,7 @@
     <!-- Leaflet CSS -->
     <link
         rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        href="https://unpkg.com/leaflet@latest/dist/leaflet.css"
     />
 
     <style>
@@ -26,7 +26,6 @@
         }
         #controls label {
             font-size: 12px;
-            text-transform: uppercase;
             letter-spacing: 0.05em;
         }
         #datasetSelect {
@@ -56,9 +55,9 @@
 <div id="controls">
     <label for="datasetSelect">H3 Dataset</label><br />
     <select id="datasetSelect">
-        <option value="data/h3_0_origin.geojson">H3 origin</option>
-        <option value="data/h3_0_shift_west.geojson">H3 shifting</option>
-        <option value="data/h3_0_split.geojson">H3 splitting</option>
+        <option value="https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_origin.geojson">H3 origin</option>
+        <option value="https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_shift_west.geojson">H3 shifting</option>
+        <option value="https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_split.geojson">H3 splitting</option>
     </select>
     <div id="antimeridianControl">
         <input type="checkbox" id="antimeridianToggle" />
@@ -69,12 +68,13 @@
 </div>
 
 <!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@latest/dist/leaflet.js"></script>
 <!-- <script src="https://cdn.jsdelivr.net/gh/briannaAndCo/Leaflet.Antimeridian@v1.0.0/dist/leaflet.antimeridian-src.js"></script> -->
 <script src="https://briannaandco.github.io/Leaflet.Antimeridian/dist/leaflet.antimeridian-src.js"></script>
 <script>
 // Initialize the map
 var map = L.map('map').setView([0, 0], 0);
+map.zoomControl.setPosition('topright');
 
 // Basemap (OpenStreetMap)
 L.tileLayer('https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png').addTo(map);
@@ -101,8 +101,12 @@ function loadGeoJSON(fileName) {
         .catch(err => console.error("Error loading GeoJSON:", err));
 }
 
+function isOriginDataset(value) {
+    return (value || '').indexOf('h3_0_origin.geojson') !== -1;
+}
+
 function shouldUseAntimeridian() {
-    return datasetSelect.value === 'data/h3_0_origin.geojson' && antimeridianToggle.checked;
+    return isOriginDataset(datasetSelect.value) && antimeridianToggle.checked;
 }
 
 function renderGeoJSON(data, useAntimeridian) {
@@ -261,7 +265,7 @@ function applyHoverHighlight(layer) {
 }
 
 function toggleAntimeridianControl() {
-    var isOrigin = datasetSelect.value === 'data/h3_0_origin.geojson';
+    var isOrigin = isOriginDataset(datasetSelect.value);
     antimeridianControl.style.display = isOrigin ? 'block' : 'none';
     if (!isOrigin && antimeridianToggle.checked) {
         antimeridianToggle.checked = false;

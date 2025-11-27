@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>OpenLayers Antimeridian</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.7.0/ol.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css">
     <style>
         html, body {
             margin: 0;
@@ -60,13 +60,13 @@
 <div class="controls-panel">
     <label for="dataset-select">H3 Dataset:</label>
     <select id="dataset-select">
-        <option value="data/h3_0_origin.geojson" selected>H3 origin</option>
-        <option value="data/h3_0_shift_west.geojson">H3 shifting</option>
-        <option value="data/h3_0_split.geojson">H3 splitting</option>
+        <option value="https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_origin.geojson" selected>H3 origin</option>
+        <option value="https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_shift_west.geojson">H3 shifting</option>
+        <option value="https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_split.geojson">H3 splitting</option>
     </select>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/ol@10.7.0/dist/ol.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
 <script>
     const basemapLayer = new ol.layer.Tile({
         source: new ol.source.XYZ({

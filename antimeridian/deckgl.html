@@ -4,7 +4,7 @@
     <title>Deck.gl Antimeridian</title>
 
     <!-- deck.gl standalone bundle -->
-    <script src="https://unpkg.com/deck.gl@^9.0.0-beta.2/dist.min.js"></script>
+    <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
 
     <style type="text/css">
       body {margin: 0; padding: 0; font-family: sans-serif;}
@@ -22,7 +22,6 @@
       }
       #controls label {
         font-size: 12px;
-        text-transform: uppercase;
         letter-spacing: 0.05em;
       }
       #datasetSelect {
@@ -51,9 +50,9 @@
     <div id="controls">
       <label for="datasetSelect">H3 Dataset</label><br />
       <select id="datasetSelect">
-        <option value="data/h3_0_origin.geojson">H3 origin</option>
-        <option value="data/h3_0_shift_west.geojson">H3 shifting</option>
-        <option value="data/h3_0_split.geojson">H3 splitting</option>
+        <option value="https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_origin.geojson">H3 origin</option>
+        <option value="https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_shift_west.geojson">H3 shifting</option>
+        <option value="https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_split.geojson">H3 splitting</option>
       </select>
       <div id="antimeridianControl">
         <input type="checkbox" id="antimeridianToggle" />
@@ -66,9 +65,9 @@
   <script type="text/javascript">
 
 const DATASETS = [
-  'data/h3_0_origin.geojson',
-  'data/h3_0_shift_west.geojson',
-  'data/h3_0_split.geojson'
+  'https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/  data/h3_0_origin.geojson',
+  'https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_shift_west.geojson',
+  'https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_split.geojson'
 ];
 const DARK_TILES = 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
@@ -77,7 +76,7 @@ const antimeridianControl = document.getElementById('antimeridianControl');
 const antimeridianToggle = document.getElementById('antimeridianToggle');
 
 function isOriginDataset() {
-  return datasetSelect.value === DATASETS[0];
+  return (datasetSelect.value || '').indexOf('https://raw.githubusercontent.com/opengeoshub/vgriddemo/refs/heads/main/antimeridian/data/h3_0_origin.geojson') !== -1;
 }
 
 function wrapLongitudeEnabled() {
