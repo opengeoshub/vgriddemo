@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Kepler.gl Antimeridian</title>
+
+    <!-- React / Redux stack -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js"></script>
+    <script src="https://unpkg.com/react-redux@8.1.3/dist/react-redux.min.js"></script>
+
+    <!-- Mapbox -->
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+    <!-- Kepler.gl UMD -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/kepler.gl@2.6.5/umd/keplergl.min.css"
+    />
+    <script src="https://unpkg.com/kepler.gl@2.6.5/umd/keplergl.min.js"></script>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+      }
+
+      #root {
+        width: 100vw;
+        height: 100vh;
+      }
+
+      #token-warning {
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #26374a;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 999px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        font-size: 14px;
+        z-index: 2;
+        display: none;
+      }
+
+      #token-warning.visible {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      #token-warning code {
+        background: rgba(255, 255, 255, 0.18);
+        padding: 0 8px;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="token-warning">
+      Mapbox token missing. Set <code>window.localStorage.mapbox_token</code>
+      or update <code>MAPBOX_TOKEN</code> in <code>kepler/index.html</code>.
+    </div>
+    <div id="root"></div>
+
+    <script>
+      const MAPBOX_TOKEN =
+        window.localStorage.getItem('mapbox_token') || 'pk.eyJ1IjoidGhhbmdxZCIsImEiOiJucHFlNFVvIn0.j5yb-N8ZR3d4SJAYZz-TZA';
+      const H3_ORIGIN = './data/h3_0_origin.geojson';
+      const COUNTRIES =
+        'https://raw.githubusercontent.com/opengeoshub/vopendata/refs/heads/main/shape/world_countries.geojson';
+
+      if (!window.process) {
+        window.process = {env: {}};
+      } else if (!window.process.env) {
+        window.process.env = {};
+      }
+
+      if (MAPBOX_TOKEN && MAPBOX_TOKEN !== 'pk.eyJ1IjoidGhhbmdxZCIsImEiOiJucHFlNFVvIn0.j5yb-N8ZR3d4SJAYZz-TZA') {
+        window.process.env.MapboxAccessToken = MAPBOX_TOKEN;
+        if (window.mapboxgl) {
+          window.mapboxgl.accessToken = MAPBOX_TOKEN;
+        }
+      } else {
+        document.getElementById('token-warning').classList.add('visible');
+      }
+
+      const {combineReducers, createStore} = Redux;
+      const {Provider} = ReactRedux;
+      const {KeplerGl: KeplerComponent, keplerGlReducer, addDataToMap, processors} =
+        KeplerGl;
+
+      const reducers = combineReducers({
+        keplerGl: keplerGlReducer
+      });
+
+      const store = createStore(reducers);
+
+      const APP_CONFIG = {
+        version: 'v1',
+        config: {
+          visState: {
+            filters: [],
+            layers: [
+              {
+                id: 'countries-outline',
+                type: 'geojson',
+                config: {
+                  dataId: 'countries',
+                  label: 'Countries',
+                  color: [180, 180, 180],
+                  columns: {
+                    geojson: 'geometry'
+                  },
+                  isVisible: true,
+                  visConfig: {
+                    opacity: 0.4,
+                    filled: false,
+                    thickness: 1.2,
+                    strokeColor: [180, 180, 180],
+                    enable3d: false,
+                    stroked: true
+                  }
+                }
+              },
+              {
+                id: 'h3-origin',
+                type: 'geojson',
+                config: {
+                  dataId: 'h3-origin',
+                  label: 'H3 origin',
+                  color: [0, 128, 255],
+                  columns: {
+                    geojson: 'geometry'
+                  },
+                  isVisible: true,
+                  visConfig: {
+                    opacity: 0.6,
+                    filled: true,
+                    thickness: 1,
+                    strokeColor: [40, 80, 180],
+                    enable3d: false,
+                    stroked: true
+                  }
+                }
+              }
+            ],
+            interactionConfig: {
+              tooltip: {
+                fieldsToShow: {
+                  countries: [{name: 'name', format: null}],
+                  'h3-origin': [{name: 'h3', format: null}]
+                },
+                enabled: true
+              }
+            }
+          },
+          mapState: {
+            latitude: 30,
+            longitude: 0,
+            zoom: 1.5,
+            pitch: 30,
+            bearing: 0
+          },
+          mapStyle: {
+            styleType: 'dark'
+          }
+        }
+      };
+
+      async function loadData() {
+        const [countries, h3] = await Promise.all([
+          fetch(COUNTRIES).then((r) => r.json()),
+          fetch(H3_ORIGIN).then((r) => r.json())
+        ]);
+
+        const countriesDataset = processors.processGeojson(countries, {
+          id: 'countries'
+        });
+        const h3Dataset = processors.processGeojson(h3, {id: 'h3-origin'});
+
+        store.dispatch(
+          addDataToMap({
+            datasets: [countriesDataset, h3Dataset],
+            options: {
+              centerMap: false,
+              keepExistingConfig: false
+            },
+            config: APP_CONFIG
+          })
+        );
+      }
+
+      const App = () => {
+        const [dimensions, setDimensions] = React.useState({
+          width: window.innerWidth,
+          height: window.innerHeight
+        });
+
+        React.useEffect(() => {
+          loadData().catch((err) =>
+            console.error('[kepler] Failed to load data', err)
+          );
+        }, []);
+
+        React.useEffect(() => {
+          const handler = () =>
+            setDimensions({
+              width: window.innerWidth,
+              height: window.innerHeight
+            });
+          window.addEventListener('resize', handler);
+          return () => window.removeEventListener('resize', handler);
+        }, []);
+
+        return React.createElement(Provider, {store}, [
+          React.createElement(KeplerComponent, {
+            id: 'kepler-map',
+            mapboxApiAccessToken: MAPBOX_TOKEN,
+            width: dimensions.width,
+            height: dimensions.height,
+            key: 'map'
+          })
+        ]);
+      };
+
+      ReactDOM.render(
+        React.createElement(App),
+        document.getElementById('root')
+      );
+    </script>
+  </body>
+</html>
+

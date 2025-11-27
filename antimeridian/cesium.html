@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Cesium Antimeridian</title>
+    <link rel="stylesheet" href="https://unpkg.com/cesium@1.120.0/Build/Cesium/Widgets/widgets.css" />
+    <script src="https://unpkg.com/cesium@1.120.0/Build/Cesium/Cesium.js"></script>
+    <style>
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .loading {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            z-index: 100;
+            font-size: 14px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cesiumContainer"></div>
+    <div id="loading" class="loading">Loading GeoJSON…</div>
+    <script>
+        const H3_ORIGIN = 'data/h3_0_origin.geojson';
+        const loadingEl = document.getElementById('loading');
+
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+            animation: false,
+            baseLayerPicker: false,
+            fullscreenButton: false,
+            vrButton: false,
+            geocoder: false,
+            navigationHelpButton: false,
+            homeButton: false,
+            timeline: false,
+            sceneMode: Cesium.SceneMode.SCENE3D,
+            imageryProvider: false,
+            terrainProvider: new Cesium.EllipsoidTerrainProvider()
+        });
+        viewer.imageryLayers.addImageryProvider(
+            new Cesium.UrlTemplateImageryProvider({
+                url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                maximumLevel: 20
+            })
+        );
+        viewer.scene.globe.depthTestAgainstTerrain = true;
+        const baseFill = Cesium.Color.fromCssColorString('rgba(255,0,0,0.08)');
+        const baseStroke = Cesium.Color.fromCssColorString('rgba(255,0,0,1)');
+
+        async function loadGeoJsonLayer(url, options) {
+            loadingEl.style.display = 'block';
+            try {
+                const source = await Cesium.GeoJsonDataSource.load(url, options);
+                viewer.dataSources.add(source);
+                return source;
+            } finally {
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        async function init() {
+            await loadGeoJsonLayer(H3_ORIGIN, {
+                stroke: baseStroke,
+                fill: baseFill,
+                strokeWidth: 2,
+                clampToGround: false
+            });
+        }    
+
+        init();
+    </script>
+</body>
+
+</html>
+

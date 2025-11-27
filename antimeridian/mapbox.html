@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>vgrid-mapbox Demo</title>
+    <title>Mapbox Antimeridian</title>
 
     <!-- Mapbox GL JS -->
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
@@ -23,7 +23,7 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            background: white;
+            background: rgba(0, 0, 0, 0.7);
             padding: 15px;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -37,7 +37,7 @@
             margin-bottom: 8px;
             font-weight: bold;
             font-size: 14px;
-            color: #333;
+            color: #fff;
         }
 
         .projection-panel select {
@@ -60,34 +60,19 @@
             box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
         }
 
-        .projection-panel button {
-            width: 100%;
-            margin-top: 12px;
-            padding: 8px 12px;
-            border: 1px solid #0066cc;
-            border-radius: 4px;
-            font-size: 14px;
-            background: #0066cc;
-            color: white;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s, border-color 0.2s;
-        }
-
-        .projection-panel button:hover {
-            background: #0052a3;
-            border-color: #0052a3;
-        }
-
-        .projection-panel button:active {
-            background: #003d7a;
-        }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
     <div class="projection-panel">
+        <label for="dataset-select">H3 Dataset:</label>
+        <select id="dataset-select">
+            <option value="data/h3_0_origin.geojson">H3 origin</option>
+            <option value="data/h3_0_shift_west.geojson">H3 shifting</option>
+            <option value="data/h3_0_split.geojson">H3 splitting</option>
+        </select>
+
         <label for="projection-select">Projection:</label>
         <select id="projection-select">
             <option value="equalEarth">Equal Earth</option>
@@ -99,7 +84,6 @@
             <option value="equirectangular">Equirectangular</option>
             <option value="globe">Globe</option>
         </select>
-        <button onclick="exportToGeoJSON()">Export to GeoJSON</button>
     </div>
     <script type="module">
         // 🔑 Add your Mapbox access token
@@ -109,149 +93,146 @@
             container: 'map',
             style: 'https://raw.githubusercontent.com/opengeoshub/vstyles/main/versatiles/eclipse.json',
             center: [0, 0],
-            zoom: 1.2,
-            projection: { name: 'equalEarth' }
+            zoom: 0,
+            projection: { name: 'mercator' }
         });
         map.addControl(new mapboxgl.NavigationControl())
-
-        function formatNumber(value, digits = 2) {
-            return typeof value === 'number' ? value.toFixed(digits) : (value ?? 'N/A');
-        }
-
-        function formatWithSeparators(value) {
-            return typeof value === 'number' ? value.toLocaleString() : (value ?? 'N/A');
-        }
-
-        function addH3OriginLayer() {
-            map.addSource('h3-origin', {
-                type: 'geojson',
-                data: './h3_0_balanced_shifted.geojson'
-            });
-            map.addLayer({
-                id: 'h3-origin-fill',
-                type: 'fill',
-                source: 'h3-origin',
-                paint: {
-                    'fill-color': 'rgba(255, 0, 0, 0.15)',
-                    'fill-outline-color': 'rgba(255, 255, 255, 0.8)'
-                }
-            });
-            map.addLayer({
-                id: 'h3-origin-layer',
-                type: 'line',
-                source: 'h3-origin',
-                paint: {
-                    'line-color': '#ffffff',
-                    'line-width': 1.5,
-                    'line-dasharray': [2, 4, 1, 4]
-                }
-            });
-        }
-
-        // Projection list
-        const projections = [
-            { name: "equalEarth", value: "equalEarth" },
-            { name: "albers", value: "albers" },
-            { name: "mercator", value: "mercator" },
-            { name: "lambertConformalConic", value: "lambertConformalConic" },
-            { name: "winkelTripel", value: "winkelTripel" },
-            { name: "naturalEarth", value: "naturalEarth" },
-            { name: "equirectangular", value: "equirectangular" },
-            { name: "globe", value: "globe" }
-        ];
-
-        // Set initial projection in dropdown
+        
+        const datasetSelect = document.getElementById('dataset-select');
         const projectionSelect = document.getElementById('projection-select');
-        projectionSelect.value = 'equalEarth';
+        projectionSelect.value = 'mercator';
 
-        // Handle projection change
+        let hoveredFeatureId = null;
+        let hoverHandlersInitialized = false;
+        let activeDataset = datasetSelect.value;
+
+        map.on('load', () => {
+            loadDataset(activeDataset);
+        });
+
+        datasetSelect.addEventListener('change', (event) => {
+            activeDataset = event.target.value;
+            resetHoverState();
+            loadDataset(activeDataset);
+        });
+
         projectionSelect.addEventListener('change', (e) => {
             const selectedProjection = e.target.value;
             map.setProjection({ name: selectedProjection });
         });
 
-        map.on('load', () => {
-            addH3OriginLayer();
-        });
-        map.on('click', (e) => {
-            const features = map.queryRenderedFeatures(e.point, {
-                layers: ['h3-origin-layer']
+        async function loadDataset(datasetUrl) {
+            try {
+                const response = await fetch(datasetUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to load dataset: ${response.status}`);
+                }
+                const geojson = await response.json();
+                const source = map.getSource('h3-origin');
+                if (source) {
+                    source.setData(geojson);
+                } else {
+                    addH3Layer(geojson);
+                }
+            } catch (error) {
+                console.error('Error loading dataset:', error);
+            }
+        }
+
+        function addH3Layer(initialData) {
+            map.addSource('h3-origin', {
+                type: 'geojson',
+                data: initialData,
+                generateId: true
             });
 
-            if (features.length) {
-                const feature = features[0];  // Select the first feature if there are multiple
-
-                // Create a popup with the feature properties
-                const popupContent = `
-            <strong>H3 Index: </strong> ${feature.properties.h3} <br>
-            <strong>Resolution: </strong> ${feature.properties.resolution} <br>
-            <strong>Center (lat, lon): </strong> ${formatNumber(feature.properties.center_lat)}, ${formatNumber(feature.properties.center_lon)} <br>
-            <strong>Avg Edge Length (m): </strong> ${formatWithSeparators(feature.properties.avg_edge_len)} <br>
-            <strong>Cell Area (m²): </strong> ${formatWithSeparators(feature.properties.cell_area)} <br>
-            <strong>Cell Perimeter (m): </strong> ${formatWithSeparators(feature.properties.cell_perimeter)}<br>
-            `;
-                // Create a popup and set its coordinates
-                const popup = new mapboxgl.Popup()
-                    .setLngLat(e.lngLat)  // Position the popup at the clicked location
-                    .setHTML(popupContent) // Set the HTML content for the popup
-                    .addTo(map);  // Add the popup to the map
-
-                currentPopup = popup;
-
-                // Add a highlight layer if it doesn't exist yet
-                if (!map.getLayer('highlight-layer')) {
-                    map.addLayer({
-                        'id': 'highlight-layer',
-                        'type': 'fill',
-                        'source': {
-                            'type': 'geojson',
-                            'data': {
-                                'type': 'FeatureCollection',
-                                'features': []
-                            }
-                        },
-                        'paint': {
-                            'fill-color': 'rgba(255, 0, 0)', // Red color for highlight
-                            'fill-opacity': 0.2,  // Set transparency of the highlight
-                        }
-                    });
+            map.addLayer({
+                id: 'h3-origin-fill',
+                type: 'fill',
+                source: 'h3-origin',
+                paint: {
+                    'fill-color': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        'rgba(49, 215, 255, 0.35)',
+                        'rgba(0, 0, 0, 0)'
+                    ],
+                    'fill-outline-color': 'rgba(255, 0, 0, 1)'
                 }
+            });
 
-                // Update the source of the highlight layer with the clicked feature's geometry
-                map.getSource('highlight-layer').setData({
-                    'type': 'FeatureCollection',
-                    'features': [feature]
-                });
-            }
-        });
-        function exportToGeoJSON() {
-            const features = map.queryRenderedFeatures({ layers: ['h3-origin-layer'] });
+            map.addLayer({
+                id: 'h3-origin-outline',
+                type: 'line',
+                source: 'h3-origin',
+                paint: {
+                    'line-color': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        'rgba(49, 215, 255, 1)',
+                        'rgba(255, 0, 0, 1)'
+                    ],
+                    'line-width': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        3,
+                        1.5
+                    ]
+                }
+            });
 
-            if (!features.length) {
-                alert("No H3 grid features found in the current viewport.");
+            setupHoverHandlers();
+        }
+
+        function setupHoverHandlers() {
+            if (hoverHandlersInitialized) {
                 return;
             }
+            hoverHandlersInitialized = true;
 
-            // Remove duplicates (some tiles can appear multiple times)
-            // const uniqueFeatures = Array.from(new Map(
-            //     features.map(f => [f.properties.h3_id, f])
-            // ).values());
+            map.on('mouseenter', 'h3-origin-fill', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
 
-            const geojson = {
-                type: 'FeatureCollection',
-                features: features
-            };
+            map.on('mousemove', 'h3-origin-fill', (event) => {
+                if (!event.features || !event.features.length) {
+                    return;
+                }
+                const featureId = event.features[0].id;
+                if (featureId == null) {
+                    return;
+                }
 
-            // Download as GeoJSON file
-            const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'h3-origin-export.geojson';
-            a.click();
-            URL.revokeObjectURL(url);
+                if (hoveredFeatureId !== null && hoveredFeatureId !== featureId) {
+                    map.setFeatureState(
+                        { source: 'h3-origin', id: hoveredFeatureId },
+                        { hover: false }
+                    );
+                }
+
+                hoveredFeatureId = featureId;
+                map.setFeatureState(
+                    { source: 'h3-origin', id: hoveredFeatureId },
+                    { hover: true }
+                );
+            });
+
+            map.on('mouseleave', 'h3-origin-fill', () => {
+                resetHoverState();
+                map.getCanvas().style.cursor = '';
+            });
         }
-        window.exportToGeoJSON = exportToGeoJSON;
+
+        function resetHoverState() {
+            if (hoveredFeatureId === null) {
+                return;
+            }
+            map.setFeatureState(
+                { source: 'h3-origin', id: hoveredFeatureId },
+                { hover: false }
+            );
+            hoveredFeatureId = null;
+        }
     </script>
 </body>
 

@@ -60,7 +60,7 @@ class rHEALPix(Projection):
 img_extent = (-180, 180, -90, 90)
 
 # Load image
-img = plt.imread('./vgrid/utils/polyhedra_map/blue_marble.jpg')
+img = plt.imread('./polyhedra_map/blue_marble.jpg')
 # plt.imshow(img)
 
 # Set dimensions corresponding to the Rubiks cube size

@@ -2,57 +2,159 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>OpenLayers GeoJSON Example</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@7.4.0/ol.css">
+    <title>OpenLayers Antimeridian</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.7.0/ol.css">
     <style>
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
+            font-family: Arial, sans-serif;
         }
         #map {
             width: 100%;
             height: 100%;
         }
+        .ol-zoom {
+            top: 10px;
+            left: auto;
+            right: 10px;
+        }
+        .controls-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            width: 190px;
+        }
+        .controls-panel label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #fff;
+        }
+        .controls-panel select {
+            width: 100%;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background: #fff;
+            color: #000;
+            font-size: 13px;
+        }
+        .controls-panel select:focus {
+            outline: none;
+            border-color: #31d7ff;
+        }
     </style>
 </head>
 <body>
 <div id="map"></div>
+<div class="controls-panel">
+    <label for="dataset-select">H3 Dataset:</label>
+    <select id="dataset-select">
+        <option value="data/h3_0_origin.geojson" selected>H3 origin</option>
+        <option value="data/h3_0_shift_west.geojson">H3 shifting</option>
+        <option value="data/h3_0_split.geojson">H3 splitting</option>
+    </select>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/ol@7.4.0/dist/ol.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ol@10.7.0/dist/ol.js"></script>
 <script>
-    // Create the OpenStreetMap basemap
-    const osmLayer = new ol.layer.Tile({
-        source: new ol.source.OSM()
+    const basemapLayer = new ol.layer.Tile({
+        source: new ol.source.XYZ({
+            url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            attributions: '&copy; <a href="https://carto.com/" target="_blank" rel="noopener noreferrer">CARTO</a>'
+        })
     });
 
-    // Create a vector layer for the GeoJSON
-    const geojsonLayer = new ol.layer.Vector({
-        source: new ol.source.Vector({
-            url: './h3_0_splitted.geojson',
-            format: new ol.format.GeoJSON()
+    const datasetSelect = document.getElementById('dataset-select');
+
+    const defaultStyle = new ol.style.Style({
+        stroke: new ol.style.Stroke({
+            color: 'rgba(255, 0, 0, 1)',
+            width: 1.5
         }),
-        style: new ol.style.Style({
-            stroke: new ol.style.Stroke({
-                color: 'red',
-                width: 3
-            }),
-            fill: new ol.style.Fill({
-                color: 'rgba(255, 102, 0, 0.1)'
-            })
+        fill: new ol.style.Fill({
+            color: 'rgba(0, 0, 0, 0)'
         })
+    });
+
+    const hoverStyle = new ol.style.Style({
+        stroke: new ol.style.Stroke({
+            color: 'rgba(49, 215, 255, 1)',
+            width: 3
+        }),
+        fill: new ol.style.Fill({
+            color: 'rgba(49, 215, 255, 0.35)'
+        })
+    });
+
+    const vectorSource = new ol.source.Vector({
+        url: datasetSelect.value,
+        format: new ol.format.GeoJSON()
+    });
+
+    const geojsonLayer = new ol.layer.Vector({
+        source: vectorSource,
+        style: function (feature) {
+            return feature.get('hover') ? hoverStyle : defaultStyle;
+        }
     });
 
     // Create the map
     const map = new ol.Map({
         target: 'map',
-        layers: [osmLayer, geojsonLayer],
+        layers: [basemapLayer, geojsonLayer],
         view: new ol.View({
             center: ol.proj.fromLonLat([0, 0]),
             zoom: 0
         })
     });
+
+    let hoveredFeature = null;
+
+    map.on('pointermove', function (event) {
+        const pixel = map.getEventPixel(event.originalEvent);
+        const feature = map.forEachFeatureAtPixel(pixel, function (feat) {
+            return feat;
+        });
+        updateHoverState(feature);
+        map.getTargetElement().style.cursor = feature ? 'pointer' : '';
+    });
+
+    map.getViewport().addEventListener('mouseleave', function () {
+        updateHoverState(null);
+        map.getTargetElement().style.cursor = '';
+    });
+
+    datasetSelect.addEventListener('change', function (event) {
+        updateHoverState(null);
+        vectorSource.setUrl(event.target.value);
+        vectorSource.refresh();
+    });
+
+    function updateHoverState(feature) {
+        if (hoveredFeature === feature) {
+            return;
+        }
+        if (hoveredFeature) {
+            hoveredFeature.set('hover', false);
+            hoveredFeature.changed();
+        }
+        hoveredFeature = feature || null;
+        if (hoveredFeature) {
+            hoveredFeature.set('hover', true);
+            hoveredFeature.changed();
+        }
+    }
 
 </script>
 </body>

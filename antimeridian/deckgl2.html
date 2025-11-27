@@ -1,0 +1,121 @@
+<html>
+  <head>
+    <script src="https://unpkg.com/deck.gl@^9.0.0-beta.2/dist.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style type="text/css">
+      body {margin: 0; padding: 0; background: #111; font-family: Helvetica, Arial, sans-serif;}
+      #container {width: 100vw; height: 100vh;}
+      #name {
+        position: fixed;
+        top: 16px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        color: #fff;
+        font-size: 16px;
+        pointer-events: none;
+      }
+      #hint {
+        position: fixed;
+        bottom: 16px;
+        right: 24px;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #222;
+        background: rgba(255, 255, 255, 0.85);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="name"></div>
+    <div id="container"></div>
+    <div id="hint">Click anywhere to cycle projections</div>
+  </body>
+
+  <script type="text/javascript">
+const {DeckGL, ScatterplotLayer, GeoJsonLayer, COORDINATE_SYSTEM, OrthographicView} = deck;
+
+const DATA_URL =
+  'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_10m_admin_1_label_points.geojson';
+
+// Extended list inspired by https://codepen.io/vis-gl/pen/xMGzxB
+const PROJECTIONS = [
+  'geoMercator',
+  'geoNaturalEarth1',
+  'geoEqualEarth',
+  'geoConicEqualArea',
+  'geoConicEquidistant',
+  'geoTransverseMercator',
+  'geoEquirectangular',
+  'geoAlbers',
+  'geoAzimuthalEqualArea',
+  'geoAzimuthalEquidistant',
+  'geoOrthographic',
+  'geoStereographic',
+  'geoGnomonic'
+];
+
+const EXTENT = [[-450, -230], [450, 230]];
+
+const deckgl = new DeckGL({
+  container: 'container',
+  mapbox: false,
+  views: new OrthographicView({controller: true}),
+  initialViewState: {
+    target: [0, 0, 0],
+    zoom: 1
+  },
+  controller: true
+});
+
+let dataCache = null;
+let projectionIndex = 0;
+
+fetch(DATA_URL)
+  .then(resp => resp.json())
+  .then(data => {
+    dataCache = data;
+    cycleProjection();
+    document.addEventListener('click', cycleProjection);
+  })
+  .catch(err => {
+    document.getElementById('name').innerHTML = 'Failed to load sample data';
+    console.error(err);
+  });
+
+function cycleProjection() {
+  if (!dataCache) {
+    return;
+  }
+
+  const projectionName = PROJECTIONS[(projectionIndex++) % PROJECTIONS.length];
+  document.getElementById('name').innerHTML =
+    projectionName + ' — ' + projectionIndex + '/' + PROJECTIONS.length;
+
+  const projection = d3[projectionName]().fitExtent(EXTENT, dataCache);
+
+  const layer = new ScatterplotLayer({
+    id: 'projection-layer',
+    data: dataCache.features,
+    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+    getPosition: f => projection(f.geometry.coordinates),
+    getRadius: 0.12,
+    radiusMinPixels: 1,
+    getFillColor: f => [255, f.properties.scalerank * 20, 0],
+    updateTriggers: {
+      getPosition: projectionName
+    },
+    transitions: {
+      getPosition: {
+        duration: 1100,
+        easing: d3.easeCubicInOut
+      }
+    }
+  });
+
+  deckgl.setProps({layers: [layer]});
+}
+  </script>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Leaflet Antimeridian</title>
+
+    <!-- Leaflet CSS -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
+        #map { width: 100%; height: 100%; }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            min-width: 200px;
+        }
+        #controls label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        #datasetSelect {
+            margin-top: 4px;
+            width: 180px;
+            padding: 4px;
+        }
+        #antimeridianControl {
+            display: none;
+            margin-top: 8px;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        #antimeridianControl label {
+            text-transform: none;
+            letter-spacing: normal;
+            font-size: 11px;
+        }
+        #antimeridianControl a {
+            color: #7fe1ff;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="controls">
+    <label for="datasetSelect">H3 Dataset</label><br />
+    <select id="datasetSelect">
+        <option value="data/h3_0_origin.geojson">H3 origin</option>
+        <option value="data/h3_0_shift_west.geojson">H3 shifting</option>
+        <option value="data/h3_0_split.geojson">H3 splitting</option>
+    </select>
+    <div id="antimeridianControl">
+        <input type="checkbox" id="antimeridianToggle" />
+        <label for="antimeridianToggle">
+            Enable <a href="https://github.com/briannaAndCo/Leaflet.Antimeridian" target="_blank" rel="noopener noreferrer">Leaflet.Antimeridian</a>
+        </label>
+    </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/gh/briannaAndCo/Leaflet.Antimeridian@v1.0.0/dist/leaflet.antimeridian-src.js"></script> -->
+<script src="https://briannaandco.github.io/Leaflet.Antimeridian/dist/leaflet.antimeridian-src.js"></script>
+<script>
+// Initialize the map
+var map = L.map('map').setView([0, 0], 0);
+
+// Basemap (OpenStreetMap)
+L.tileLayer('https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png').addTo(map);
+
+var geoLayer = null;
+var datasetSelect = document.getElementById('datasetSelect');
+var antimeridianControl = document.getElementById('antimeridianControl');
+var antimeridianToggle = document.getElementById('antimeridianToggle');
+var styleOptions = {
+    color: "red",
+    weight: 1,
+    fillOpacity: 0
+};
+var highlightStyle = {
+    color: "#31d7ff",
+    weight: 3,
+    fillOpacity: 0.35
+};
+
+function loadGeoJSON(fileName) {
+    fetch(fileName)
+        .then(response => response.json())
+        .then(data => renderGeoJSON(data, shouldUseAntimeridian()))
+        .catch(err => console.error("Error loading GeoJSON:", err));
+}
+
+function shouldUseAntimeridian() {
+    return datasetSelect.value === 'data/h3_0_origin.geojson' && antimeridianToggle.checked;
+}
+
+function renderGeoJSON(data, useAntimeridian) {
+    if (geoLayer) {
+        geoLayer.remove();
+    }
+
+    if (!data || !Array.isArray(data.features)) {
+        console.warn("GeoJSON has no features");
+        geoLayer = L.layerGroup().addTo(map);
+        return;
+    }
+
+    if (useAntimeridian && !isAntimeridianAvailable()) {
+        console.warn("Leaflet.Antimeridian not available, falling back to default rendering.");
+        useAntimeridian = false;
+    }
+
+    if (!useAntimeridian) {
+        geoLayer = L.geoJSON(data, {
+            style: styleOptions,
+            onEachFeature: function (_feature, layer) {
+                applyHoverHighlight(layer);
+            }
+        }).addTo(map);
+        var defaultBounds = geoLayer.getBounds();
+        if (defaultBounds.isValid()) {
+            map.fitBounds(defaultBounds);
+        }
+        return;
+    }
+
+    var wrappedLayers = [];
+    var fallbackFeatures = [];
+
+    data.features.forEach(function (feature) {
+        if (!feature || !feature.geometry) {
+            return;
+        }
+
+        var geometry = feature.geometry;
+        switch (geometry.type) {
+            case 'Polygon':
+                wrappedLayers.push(createWrappedPolygon(geometry.coordinates));
+                break;
+            case 'MultiPolygon':
+                geometry.coordinates.forEach(function (polyCoords) {
+                    wrappedLayers.push(createWrappedPolygon(polyCoords));
+                });
+                break;
+            case 'LineString':
+                wrappedLayers.push(createWrappedPolyline(geometry.coordinates));
+                break;
+            case 'MultiLineString':
+                geometry.coordinates.forEach(function (lineCoords) {
+                    wrappedLayers.push(createWrappedPolyline(lineCoords));
+                });
+                break;
+            default:
+                fallbackFeatures.push(feature);
+        }
+    });
+
+    if (fallbackFeatures.length > 0) {
+        wrappedLayers.push(L.geoJSON(
+            { type: 'FeatureCollection', features: fallbackFeatures },
+            {
+                style: styleOptions,
+                onEachFeature: function (_feature, layer) {
+                    applyHoverHighlight(layer);
+                }
+            }
+        ));
+    }
+
+    var filteredLayers = wrappedLayers.filter(Boolean);
+    if (filteredLayers.length === 0) {
+        geoLayer = L.geoJSON(data, {
+            style: styleOptions,
+            onEachFeature: function (_feature, layer) {
+                applyHoverHighlight(layer);
+            }
+        }).addTo(map);
+        var fallbackBounds = geoLayer.getBounds();
+        if (fallbackBounds.isValid()) {
+            map.fitBounds(fallbackBounds);
+        }
+        return;
+    }
+
+    geoLayer = L.layerGroup(filteredLayers).addTo(map);
+
+    var wrappedBounds = L.featureGroup(filteredLayers).getBounds();
+    if (wrappedBounds.isValid()) {
+        map.fitBounds(wrappedBounds);
+    }
+}
+
+function isAntimeridianAvailable() {
+    return L.Wrapped && (typeof L.Wrapped.wrappedPolygon === 'function' || typeof L.Wrapped.Polygon === 'function') &&
+        (typeof L.Wrapped.wrappedPolyline === 'function' || typeof L.Wrapped.Polyline === 'function');
+}
+
+function createWrappedPolygon(coords) {
+    var latLngs = coords.map(function (ring) {
+        return ring.map(toLatLng);
+    });
+    if (L.Wrapped.wrappedPolygon) {
+        return withHover(L.Wrapped.wrappedPolygon(latLngs, styleOptions));
+    }
+    if (L.Wrapped.Polygon) {
+        return withHover(new L.Wrapped.Polygon(latLngs, styleOptions));
+    }
+    return null;
+}
+
+function createWrappedPolyline(coords) {
+    var latLngs = coords.map(toLatLng);
+    if (L.Wrapped.wrappedPolyline) {
+        return withHover(L.Wrapped.wrappedPolyline(latLngs, styleOptions));
+    }
+    if (L.Wrapped.Polyline) {
+        return withHover(new L.Wrapped.Polyline(latLngs, styleOptions));
+    }
+    return null;
+}
+
+function toLatLng(coordPair) {
+    return L.latLng(coordPair[1], coordPair[0]);
+}
+
+function withHover(layer) {
+    applyHoverHighlight(layer);
+    return layer;
+}
+
+function applyHoverHighlight(layer) {
+    if (!layer) {
+        return;
+    }
+    if (layer instanceof L.LayerGroup && layer.eachLayer) {
+        layer.eachLayer(applyHoverHighlight);
+        return;
+    }
+    if (typeof layer.on === 'function') {
+        layer.on('mouseover', function (e) {
+            e.target.setStyle(highlightStyle);
+            if (e.target.bringToFront) {
+                e.target.bringToFront();
+            }
+        });
+        layer.on('mouseout', function (e) {
+            e.target.setStyle(styleOptions);
+        });
+    }
+}
+
+function toggleAntimeridianControl() {
+    var isOrigin = datasetSelect.value === 'data/h3_0_origin.geojson';
+    antimeridianControl.style.display = isOrigin ? 'block' : 'none';
+    if (!isOrigin && antimeridianToggle.checked) {
+        antimeridianToggle.checked = false;
+    }
+}
+
+datasetSelect.addEventListener('change', function (event) {
+    toggleAntimeridianControl();
+    loadGeoJSON(event.target.value);
+});
+
+antimeridianToggle.addEventListener('change', function () {
+    loadGeoJSON(datasetSelect.value);
+});
+
+// Initial load
+toggleAntimeridianControl();
+loadGeoJSON(datasetSelect.value);
+
+</script>
+
+</body>
+</html>

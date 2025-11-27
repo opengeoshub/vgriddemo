@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>D3 — Vector layer (GeoJSON) example (fixed)</title>
+  <style>
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    #map{width:100%;height:100vh;display:block;background:#000000;}
+    svg{width:100%;height:100%}
+    .feature{fill:none;stroke:#ff0000;stroke-width:0.8;cursor:pointer;opacity:0.9}
+    .projection-panel{position:fixed;top:16px;left:16px;background:rgba(0,0,0,0.7);padding:14px;border-radius:8px;width:200px;box-shadow:0 2px 8px rgba(0,0,0,0.15);color:#fff;font-size:14px;z-index:5}
+    .projection-panel label{display:block;margin-bottom:6px;font-weight:600}
+    .projection-panel select{width:100%;padding:8px 10px;border-radius:4px;border:1px solid #ddd;font-size:14px;margin-bottom:12px}
+    .projection-panel select:focus{outline:none;border-color:#0066cc;box-shadow:0 0 0 2px rgba(0,102,204,0.2)}
+    .world-layer path{pointer-events:none}
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="projection-panel">
+    <label for="dataset-select">H3 Dataset:</label>
+    <select id="dataset-select">
+      <option value="data/h3_0_origin.geojson">H3 origin</option>
+      <option value="data/h3_0_shift_west.geojson">H3 shifting</option>
+      <option value="data/h3_0_split.geojson">H3 splitting</option>
+    </select>
+
+    <label for="projection-select">Projection:</label>
+    <select id="projection-select"></select>
+  </div>
+
+  <!-- d3 v7 and topojson -->
+  <script src="https://unpkg.com/d3@7"></script>
+  <script src="https://unpkg.com/d3-geo-projection@4"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <script>
+    const container = d3.select('#map');
+    const datasetSelect = document.getElementById('dataset-select');
+    const projectionSelect = document.getElementById('projection-select');
+    const defaultProjectionId = 'aitoff';
+
+    let width = container.node().clientWidth;
+    let height = container.node().clientHeight;
+
+    const svg = container.append('svg')
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet');
+
+    const rootGroup = svg.append('g').attr('class', 'root-group');
+
+    const projectionDefinitions = [
+      { id: 'aitoff', label: 'Aitoff', factory: () => d3.geoAitoff() },
+      { id: 'albers', label: 'Albers', factory: () => d3.geoAlbers().parallels([20, 50]) },
+      { id: 'august', label: 'August', factory: () => d3.geoAugust().scale(60) },
+      { id: 'baker', label: 'Baker', factory: () => d3.geoBaker().scale(100) },
+      { id: 'berghaus', label: 'Berghaus', factory: () => d3.geoBerghaus().scale(100) },
+      { id: 'boggs', label: 'Boggs', factory: () => d3.geoBoggs() },
+      { id: 'bonne', label: 'Bonne', factory: () => d3.geoBonne().scale(120) },
+      { id: 'bromley', label: 'Bromley', factory: () => d3.geoBromley() },
+      { id: 'collignon', label: 'Collignon', factory: () => d3.geoCollignon().scale(93) },
+      { id: 'craster', label: 'Craster Parabolic', factory: () => d3.geoCraster() },
+      { id: 'eckert1', label: 'Eckert I', factory: () => d3.geoEckert1().scale(165) },
+      { id: 'eckert2', label: 'Eckert II', factory: () => d3.geoEckert2().scale(165) },
+      { id: 'eckert3', label: 'Eckert III', factory: () => d3.geoEckert3().scale(180) },
+      { id: 'eckert4', label: 'Eckert IV', factory: () => d3.geoEckert4().scale(180) },
+      { id: 'eckert5', label: 'Eckert V', factory: () => d3.geoEckert5().scale(170) },
+      { id: 'eckert6', label: 'Eckert VI', factory: () => d3.geoEckert6().scale(170) },
+      { id: 'eisenlohr', label: 'Eisenlohr', factory: () => d3.geoEisenlohr().scale(60) },
+      { id: 'equirectangular', label: 'Equirectangular (Plate Carrée)', factory: () => d3.geoEquirectangular() },
+      { id: 'fahey', label: 'Fahey', factory: () => d3.geoFahey().scale(120) },
+      { id: 'gall', label: 'Gall Stereographic', factory: () => d3.geoCylindricalStereographic().parallel(45).scale(140) },
+      { id: 'ginzburg4', label: 'Ginzburg IV', factory: () => d3.geoGinzburg4().scale(120) },
+      { id: 'ginzburg5', label: 'Ginzburg V', factory: () => d3.geoGinzburg5().scale(120) },
+      { id: 'ginzburg6', label: 'Ginzburg VI', factory: () => d3.geoGinzburg6().scale(120) },
+      { id: 'ginzburg8', label: 'Ginzburg VIII', factory: () => d3.geoGinzburg8().scale(120) },
+      { id: 'ginzburg9', label: 'Ginzburg IX', factory: () => d3.geoGinzburg9().scale(120) },
+      { id: 'gringorten', label: 'Gringorten', factory: () => d3.geoGringorten().scale(220) },
+      { id: 'guyou', label: 'Guyou', factory: () => d3.geoGuyou().scale(150) },
+      { id: 'hammer', label: 'Hammer', factory: () => d3.geoHammer().scale(165) },
+      { id: 'hammerRetro', label: 'Hammer Retroazimuthal', factory: () => d3.geoHammerRetroazimuthal().scale(90) },
+      { id: 'healpix', label: 'HEALPix', factory: () => d3.geoHealpix() },
+      { id: 'hill', label: 'Hill', factory: () => d3.geoHill().scale(120) },
+      { id: 'homolosine', label: 'Goode Homolosine', factory: () => d3.geoHomolosine() },
+      { id: 'kavrayskiy7', label: 'Kavrayskiy VII', factory: () => d3.geoKavrayskiy7() },
+      { id: 'lambertCylindrical', label: 'Lambert cylindrical equal-area', factory: () => d3.geoCylindricalEqualArea() },
+      { id: 'lagrange', label: 'Lagrange', factory: () => d3.geoLagrange().scale(120) },
+      { id: 'larrivee', label: 'Larrivée', factory: () => d3.geoLarrivee().scale(95) },
+      { id: 'laskowski', label: 'Laskowski', factory: () => d3.geoLaskowski().scale(120) },
+      { id: 'loximuthal', label: 'Loximuthal', factory: () => d3.geoLoximuthal() },
+      { id: 'miller', label: 'Miller', factory: () => d3.geoMiller().scale(100) },
+      { id: 'mtFlatPolarParabolic', label: 'McBryde–Thomas Flat-Polar Parabolic', factory: () => d3.geoMtFlatPolarParabolic() },
+      { id: 'mtFlatPolarQuartic', label: 'McBryde–Thomas Flat-Polar Quartic', factory: () => d3.geoMtFlatPolarQuartic() },
+      { id: 'mtFlatPolarSinusoidal', label: 'McBryde–Thomas Flat-Polar Sinusoidal', factory: () => d3.geoMtFlatPolarSinusoidal() },
+      { id: 'mollweide', label: 'Mollweide', factory: () => d3.geoMollweide().scale(165) },
+      { id: 'naturalEarth', label: 'Natural Earth', factory: () => d3.geoNaturalEarth1() },
+      { id: 'nellHammer', label: 'Nell–Hammer', factory: () => d3.geoNellHammer() },
+      { id: 'orthographic', label: 'Orthographic', factory: () => d3.geoOrthographic().scale(200) },
+      { id: 'polyconic', label: 'Polyconic', factory: () => d3.geoPolyconic().scale(100) },
+      { id: 'rectangularPolyconic', label: 'Rectangular Polyconic', factory: () => d3.geoRectangularPolyconic().scale(120) },
+      { id: 'robinson', label: 'Robinson', factory: () => d3.geoRobinson() },
+      { id: 'sinusoidal', label: 'Sinusoidal', factory: () => d3.geoSinusoidal() },
+      { id: 'sinuMollweide', label: 'Sinu-Mollweide', factory: () => d3.geoSinuMollweide() },
+      { id: 'stereographic', label: 'Stereographic', factory: () => d3.geoStereographic() },
+      { id: 'times', label: 'Times', factory: () => d3.geoTimes().scale(140) },
+      { id: 'vanDerGrinten', label: 'van der Grinten', factory: () => d3.geoVanDerGrinten().scale(75) },
+      { id: 'vanDerGrinten2', label: 'van der Grinten II', factory: () => d3.geoVanDerGrinten2().scale(75) },
+      { id: 'vanDerGrinten3', label: 'van der Grinten III', factory: () => d3.geoVanDerGrinten3().scale(75) },
+      { id: 'vanDerGrinten4', label: 'van der Grinten IV', factory: () => d3.geoVanDerGrinten4().scale(120) },
+      { id: 'wagner4', label: 'Wagner IV', factory: () => d3.geoWagner4() },
+      { id: 'wagner6', label: 'Wagner VI', factory: () => d3.geoWagner6() },
+      { id: 'wagner7', label: 'Wagner VII', factory: () => d3.geoWagner7() },
+      { id: 'waterman', label: 'Waterman', factory: () => d3.geoPolyhedronWaterman().scale(70) },
+      { id: 'winkelTripel', label: 'Winkel Tripel', factory: () => d3.geoWinkel3() }
+    ];
+
+    const projectionFactories = new Map(
+      projectionDefinitions.map((definition) => [definition.id, definition.factory])
+    );
+
+    projectionSelect.innerHTML = '';
+    projectionDefinitions.forEach((definition) => {
+      const option = document.createElement('option');
+      option.value = definition.id;
+      option.textContent = definition.label;
+      projectionSelect.appendChild(option);
+    });
+    projectionSelect.value = defaultProjectionId;
+
+    const sphere = { type: 'Sphere' };
+    let projection = createProjection(projectionSelect.value);
+    let path = d3.geoPath(projection);
+
+    function createProjection(id) {
+      const factory =
+        projectionFactories.get(id) ||
+        projectionFactories.get(defaultProjectionId);
+      const proj = factory();
+      return proj.fitExtent(
+        [[20, 20], [Math.max(40, width - 20), Math.max(40, height - 20)]],
+        sphere
+      );
+    }
+
+    // --- World map (Natural Earth) ---
+    // Draw the world as a separate group (beneath the feature layer)
+    const worldGroup = rootGroup.append('g')
+      .attr('class','world-layer')
+      .style('pointer-events', 'none');
+
+    let worldFeatures = null;
+    let currentDatasetGeojson = null;
+    let currentDatasetUrl = datasetSelect.value;
+
+    // Container for user-provided GeoJSON features (drawn above world)
+    const g = rootGroup.append('g').attr('class', 'layer-group');
+
+    function renderWorld() {
+      if (!worldFeatures) return;
+      worldGroup.selectAll('path')
+        .data(worldFeatures.features)
+        .join('path')
+        .attr('d', path)
+        .attr('fill', '#e0e0e0')
+        .attr('stroke', '#999')
+        .attr('stroke-width', 0.4);
+    }
+
+    function renderFeatures() {
+      if (!currentDatasetGeojson) return;
+      g.selectAll('path.feature')
+        .data(
+          currentDatasetGeojson.features,
+          (d, i) => d.id ?? d.properties?.index ?? d.properties?.h3index ?? d.properties?.name ?? i
+        )
+        .join('path')
+        .attr('class', 'feature')
+        .attr('d', path)      
+    }
+
+    function loadWorld() {
+      fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+        .then(r => r.json())
+        .then(world => {
+          worldFeatures = topojson.feature(world, world.objects.countries);
+          renderWorld();
+        })
+        .catch(err => {
+          console.warn('Could not load world-atlas:', err);
+        });
+    }
+
+    function loadDataset(url) {
+      currentDatasetUrl = url;
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to load dataset');
+          return res.json();
+        })
+        .then(geojson => {
+          currentDatasetGeojson = geojson;
+          renderFeatures();
+          resetZoom();
+        })
+        .catch(err => {
+          console.error(err);
+          container.append('div')
+            .style('padding','12px')
+            .style('color','red')
+            .text('Error loading dataset: ' + err.message);
+        });
+    }
+
+    function resetZoom() {
+      svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+    }
+
+    function setProjection(name) {
+      projection = createProjection(name);
+      path = d3.geoPath(projection);
+      renderWorld();
+      renderFeatures();
+      resetZoom();
+    }
+    datasetSelect.addEventListener('change', (event) => {
+      loadDataset(event.target.value);
+    });
+
+    projectionSelect.addEventListener('change', (event) => {
+      setProjection(event.target.value);
+    });
+
+    const zoom = d3.zoom()
+      .scaleExtent([1, 20])
+      .on('zoom', (event) => {
+        rootGroup.attr('transform', event.transform);
+      });
+
+    svg.call(zoom);
+
+    loadWorld();
+    loadDataset(currentDatasetUrl);
+
+    // Make svg resize with window
+    window.addEventListener('resize', () => {
+      width = container.node().clientWidth;
+      height = container.node().clientHeight;
+      svg.attr('viewBox', `0 0 ${width} ${height}`);
+      setProjection(projectionSelect.value);
+    });
+  </script>
+</body>
+</html>

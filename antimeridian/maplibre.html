@@ -1,61 +1,206 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-    <meta charset="UTF-8">
-    <title>MapLibre GeoJSON Example</title>
+    <title>MapLibre Antimeridian</title>
+
+    <!-- MapLibre GL JS -->
     <script src="https://unpkg.com/maplibre-gl@5.4.0/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl@5.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+
     <style>
-        html, body {
+        body {
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
+            font-family: Arial, sans-serif;
         }
+
         #map {
             width: 100%;
-            height: 100%;
+            height: 100vh;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        #controls label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        #controls select {
+            width: 180px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 13px;
+            background: #fff;
         }
     </style>
 </head>
+
 <body>
-<div id="map"></div>
+    <div id="map"></div>
+    <div id="controls">
+        <label for="datasetSelect">H3 Dataset</label>
+        <select id="datasetSelect">
+            <option value="data/h3_0_origin.geojson">H3 origin</option>
+            <option value="data/h3_0_shift_west.geojson">H3 shifting</option>
+            <option value="data/h3_0_split.geojson">H3 splitting</option>
+        </select>
+    </div>
+    <script>
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://raw.githubusercontent.com/opengeoshub/vstyles/main/versatiles/eclipse.json',
+            center: [0, 0],
+            zoom: 0
+        });
+        map.addControl(new maplibregl.NavigationControl());
 
-<script>
-    const map = new maplibregl.Map({
-        container: 'map',
-        style: 'https://raw.githubusercontent.com/opengeoshub/vstyles/main/versatiles/graybeard.json',
-        center: [0, 0],
-        zoom: 0
-    });
+        const datasetSelect = document.getElementById('datasetSelect');
+        let activeDataset = datasetSelect.value;
+        let currentGeojson = null;
+        let hoveredFeatureId = null;
+        let hoverHandlersInitialized = false;
 
-    map.on('load', () => {
-        map.addSource('antimeridian-geojson', {
-            type: 'geojson',
-            data: './h3_0_splitted.geojson'
+        function addH3OriginLayer(initialData) {
+            map.addSource('h3-origin', {
+                type: 'geojson',
+                data: initialData,
+                generateId: true
+            });
+
+            map.addLayer({
+                id: 'h3-origin-fill',
+                type: 'fill',
+                source: 'h3-origin',
+                paint: {
+                    'fill-color': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        'rgba(49, 215, 255, 0.35)',
+                        'rgba(0, 0, 0, 0)'
+                    ],
+                    'fill-outline-color': 'rgba(255, 0, 0, 1)'
+                }
+            });
+
+            map.addLayer({
+                id: 'h3-origin-outline',
+                type: 'line',
+                source: 'h3-origin',
+                paint: {
+                    'line-color': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        'rgba(49, 215, 255, 1)',
+                        'rgba(255, 0, 0, 1)'
+                    ],
+                    'line-width': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        3,
+                        1.5
+                    ]
+                }
+            });
+
+            setupHoverHandlers();
+        }
+
+        map.on('load', () => {
+            loadDataset(activeDataset);
         });
 
-        // map.addLayer({
-        //     id: 'antimeridian-fill',
-        //     type: 'fill',
-        //     source: 'antimeridian-geojson',
-        //     paint: {
-        //         'fill-color': 'red',
-        //         'fill-opacity': 0
-        //     }
-        // });
+        datasetSelect.addEventListener('change', (event) => {
+            activeDataset = event.target.value;
+            resetHoverState();
+            loadDataset(activeDataset);
+        });
 
-        map.addLayer({
-            id: 'antimeridian-outline',
-            type: 'line',
-            source: 'antimeridian-geojson',
-            paint: {
-                'line-color': 'red',
-                'line-width': 2
+        function setupHoverHandlers() {
+            if (hoverHandlersInitialized) {
+                return;
             }
-        });
-    });
-</script>
+            hoverHandlersInitialized = true;
+
+            map.on('mouseenter', 'h3-origin-fill', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mousemove', 'h3-origin-fill', (event) => {
+                if (!event.features || !event.features.length) {
+                    return;
+                }
+                const featureId = event.features[0].id;
+                if (featureId == null) {
+                    return;
+                }
+
+                if (hoveredFeatureId !== null && hoveredFeatureId !== featureId) {
+                    map.setFeatureState(
+                        { source: 'h3-origin', id: hoveredFeatureId },
+                        { hover: false }
+                    );
+                }
+
+                hoveredFeatureId = featureId;
+                map.setFeatureState(
+                    { source: 'h3-origin', id: hoveredFeatureId },
+                    { hover: true }
+                );
+            });
+
+            map.on('mouseleave', 'h3-origin-fill', () => {
+                resetHoverState();
+                map.getCanvas().style.cursor = '';
+            });
+        }
+
+        function resetHoverState() {
+            if (hoveredFeatureId === null) {
+                return;
+            }
+            map.setFeatureState(
+                { source: 'h3-origin', id: hoveredFeatureId },
+                { hover: false }
+            );
+            hoveredFeatureId = null;
+        }
+
+        async function loadDataset(dataUrl) {
+            try {
+                const response = await fetch(dataUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to load dataset: ${response.status}`);
+                }
+                currentGeojson = await response.json();
+                const source = map.getSource('h3-origin');
+                if (source) {
+                    source.setData(currentGeojson);
+                } else {
+                    addH3OriginLayer(currentGeojson);
+                }
+            } catch (error) {
+                console.error('Error loading dataset:', error);
+            }
+        }
+
+       </script>
 </body>
+
 </html>
 
