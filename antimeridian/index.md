@@ -12,6 +12,6 @@
 - [Cesium](./cesium.html)
 - [Google Maps](./google.html)
 
-## matplotlib, GeoPandas, keplergl, folium, leafmap
+## matplotlib, GeoPandas, folium, and leafmap
 
 [![image](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/opengeoshub/vgriddemo/blob/main/antimeridian/antimeridian.ipynb)
