@@ -17,6 +17,7 @@
             "name": "H3",
             "file": "h3_grid_0.geojson",
             "color": "#0000FF",
+            "width": 4,
             "attributes": [
                 "h3"
             ],
@@ -36,7 +37,7 @@
             "name": "H3 1",
             "file": "h3_grid_1.geojson",
             "color": "#676876",
-            "width": 1,
+            "width": 2,
             "attributes": [
                 "h3"
             ],
@@ -46,7 +47,7 @@
             "name": "H3 Pentagon",
             "file": "h3_grid_pentagon_1.geojson",
             "color": "#FF0000",
-            "width": 1,
+            "width": 2,
             "attributes": [
                 "h3"
             ],
@@ -234,7 +235,8 @@
             "attributes": [
                 "qtm"
             ],
-            "transparency": 0.6
+            "transparency": 0.6,
+            "width": 2
         },
         {
             "name": "Geohash",
@@ -315,16 +317,18 @@
             "attributes": [
                 "zoneID"
             ],
+            "width": 4,
             "transparency": 0.6
         },
         {
             "name": "octahedron",
             "file": "octahedron.geojson",
-            "color": "#8a0870",
+            "color": "#0000FF",
             "attributes": [
                 "qtm"
             ],
-            "transparency": 0.6
+            "transparency": 0.6,
+            "width": 6
         },
         {
             "name": "dodecahedron",
@@ -338,7 +342,8 @@
         {
             "name": "fuller_icosahedron",
             "file": "fuller_icosahedron.geojson",
-            "color": "#076b18",
+            "width": 4,
+            "color": "#FFFFFF",
             "attributes": [
                 "zoneID"
             ],
