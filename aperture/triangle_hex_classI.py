@@ -27,6 +27,36 @@ def get_hex_poly(center_x, center_y, side_len, orientation=0.0):
     return Polygon(points)
 
 
+def _point_to_segment_dist(p: np.ndarray, a: np.ndarray, b: np.ndarray) -> float:
+    """Signed distance from point p to line through a, b (segment not extended)."""
+    p, a, b = np.asarray(p), np.asarray(a), np.asarray(b)
+    ab = b - a
+    ap = p - a
+    denom = np.dot(ab, ab) + 1e-20
+    t = np.clip(np.dot(ap, ab) / denom, 0.0, 1.0)
+    proj = a + t * ab
+    return np.linalg.norm(p - proj)
+
+
+def _segment_on_ref(edge_a: np.ndarray, edge_b: np.ndarray,
+                    ref_a: np.ndarray, ref_b: np.ndarray,
+                    dist_tol: float = 0.08, angle_tol: float = 0.2) -> bool:
+    """True if hex edge (edge_a, edge_b) lies on reference segment (ref_a, ref_b)."""
+    edge_a, edge_b = np.asarray(edge_a), np.asarray(edge_b)
+    ref_a, ref_b = np.asarray(ref_a), np.asarray(ref_b)
+    mid = 0.5 * (edge_a + edge_b)
+    if _point_to_segment_dist(mid, ref_a, ref_b) > dist_tol:
+        return False
+    d_edge = edge_b - edge_a
+    d_ref = ref_b - ref_a
+    le = np.linalg.norm(d_edge)
+    lr = np.linalg.norm(d_ref)
+    if le < 1e-12 or lr < 1e-12:
+        return False
+    cos_a = np.dot(d_edge, d_ref) / (le * lr)
+    return abs(cos_a) >= 1.0 - angle_tol  # parallel or anti-parallel
+
+
 def get_eisenstein_generator(N: int):
     """
     Find integers (a, b) such that a^2 + a b + b^2 = N, if possible.
@@ -89,25 +119,26 @@ def plot_triangle_hex_classI(
     # Draw the outer triangle
     ax.plot(tri[:, 0], tri[:, 1], color="black", lw=2.0, zorder=2.5)
 
-    # First‑step subdivision: three segments from centroid to side midpoints.
-    # Always draw these with a thick line width to emphasize the Y‑shape.
+    # First‑step subdivision: three segments from centroid to side midpoints
+    # (thin; thick "tree" is drawn separately when step >= 2).
     mids = (mid_AB, mid_BC, mid_CA)
     ray_dirs = []
     base_lw = 4.0
+    thin_lw = 0.8
+    base_len = np.linalg.norm(mid_AB - centroid)
     for M in mids:
         ax.plot(
             [centroid[0], M[0]],
             [centroid[1], M[1]],
             color="black",
-            lw=base_lw,
+            lw=thin_lw,
             zorder=3,
         )
         v = M - centroid
         v_len = np.linalg.norm(v)
         ray_dirs.append(v / v_len if v_len > 1e-12 else np.zeros_like(v))
 
-    # Second‑step: extend each line towards its corresponding vertex by
-    # a length equal to the original centroid‑to‑midpoint segment.
+    # Second‑step: extend each line towards its corresponding vertex.
     extended_points = []
     if step >= 2:
         verts = (C, A, B)  # vertices corresponding to mid_AB, mid_BC, mid_CA
@@ -126,9 +157,43 @@ def plot_triangle_hex_classI(
                 [centroid[0], P[0]],
                 [centroid[1], P[1]],
                 color="black",
-                lw=2.0,
+                lw=thin_lw,
                 zorder=3,
             )
+
+        # Thick "tree": when not drawing hex, use geometric segments; when
+        # drawing hex, skeleton is drawn as thick hex edges below.
+        if len(extended_points) >= 3 and not draw_hex:
+            ax.plot(
+                [C[0], centroid[0]], [C[1], centroid[1]],
+                color="black", lw=base_lw, zorder=3.5,
+            )
+            P_left = extended_points[1]
+            P_right = extended_points[2]
+            ax.plot(
+                [centroid[0], P_left[0]], [centroid[1], P_left[1]],
+                color="black", lw=base_lw, zorder=3.5,
+            )
+            ax.plot(
+                [centroid[0], P_right[0]], [centroid[1], P_right[1]],
+                color="black", lw=base_lw, zorder=3.5,
+            )
+            seg_len = 0.6 * base_len
+            down = np.array([0.0, -1.0])
+            for P_branch in (P_left, P_right):
+                Q_branch = P_branch + seg_len * down
+                seg = LineString([tuple(P_branch), tuple(Q_branch)])
+                inter = seg.intersection(tri_poly)
+                if inter.is_empty:
+                    continue
+                geoms = [inter] if isinstance(inter, LineString) else list(inter.geoms)
+                for g in geoms:
+                    coords = np.array(g.coords)
+                    if len(coords) >= 2:
+                        ax.plot(
+                            coords[:, 0], coords[:, 1],
+                            color="black", lw=base_lw, zorder=3.5,
+                        )
 
     # Extra edges (Step 2): for each kite, from the endpoint of its ray
     # after extension, draw two short segments parallel to the *inner*
@@ -186,7 +251,7 @@ def plot_triangle_hex_classI(
                         [x0, x1],
                         [y0, y1],
                         color="black",
-                        lw=2.0,
+                        lw=thin_lw,
                         zorder=4,
                     )
 
@@ -197,9 +262,13 @@ def plot_triangle_hex_classI(
     if draw_extras and step >= 3 and extended_points:
         base_len = np.linalg.norm(mid_AB - centroid)
         if base_len > 1e-12:
-            # reuse kite_dirs but with shorter segments; all three new
-            # edges are attached exactly at the existing extra endpoint P
-            # so they "meet" the current extra edge.
+            # reuse kite_dirs but with scaled segments. The new extra
+            # edges will have 3/4 the length of the old extra edges from
+            # step 2, and for each of the three small kites we again draw
+            # two parallel edges.
+            seg_len = 0.6 * base_len               # length used in step 2
+            small_seg_len = (3.0 / 4.0) * seg_len  # 3/4 of the old extra length
+
             kite_dirs = [
                 (r1, r2),  # top small kite
                 (r0, r2),  # lower-right small kite
@@ -211,11 +280,9 @@ def plot_triangle_hex_classI(
                 if main_len < 1e-12:
                     continue
                 main_dir = main_vec / main_len
-                # Use a shorter length so all three new edges
-                # remain inside the small corner kites.
-                small_seg_len = 0.25 * main_len
 
                 # First, add the "extra" central edge continuing the same ray
+                # from P to a new point Q_main further toward the corner.
                 Q_main = P + small_seg_len * main_dir
                 seg_main = LineString([tuple(P), tuple(Q_main)])
                 inter_main = seg_main.intersection(tri_poly)
@@ -230,16 +297,17 @@ def plot_triangle_hex_classI(
                             [x0, x1],
                             [y0, y1],
                             color="black",
-                            lw=2.0,
+                            lw=thin_lw,
                             zorder=4,
                         )
 
                 # Then add the two parallel edges inside each small kite,
-                # also starting at P so they share the same joint.
+                # starting at Q_main so they form a small Y‑shape, just like
+                # step 2 but scaled down.
                 for d in (d1, d2):
                     d_unit = n(d)
-                    Q = P + small_seg_len * d_unit
-                    seg = LineString([tuple(P), tuple(Q)])
+                    Q = Q_main + small_seg_len * d_unit
+                    seg = LineString([tuple(Q_main), tuple(Q)])
                     inter = seg.intersection(tri_poly)
                     if inter.is_empty:
                         continue
@@ -253,41 +321,69 @@ def plot_triangle_hex_classI(
                             [x0, x1],
                             [y0, y1],
                             color="black",
-                            lw=2.0,
+                            lw=thin_lw,
                             zorder=4,
                         )
 
-    # Optional: render class‑I hex tessellation inside the triangle
+    # Optional: render class‑I hex tessellation; skeleton edges (tree) thick, rest thin
     if draw_hex:
         clip_region = tri_poly
         limit = int(lin_scale + 2)
+
+        # Build skeleton reference segments when step >= 2 (apex→center→branches→drops)
+        skeleton_refs = []
+        if step >= 2 and len(extended_points) >= 3:
+            P_left = extended_points[1]
+            P_right = extended_points[2]
+            seg_len = 0.6 * base_len
+            down = np.array([0.0, -1.0])
+            skeleton_refs = [
+                (np.asarray(C), np.asarray(centroid)),
+                (np.asarray(centroid), np.asarray(P_left)),
+                (np.asarray(centroid), np.asarray(P_right)),
+                (np.asarray(P_left), np.asarray(P_left) + seg_len * down),
+                (np.asarray(P_right), np.asarray(P_right) + seg_len * down),
+            ]
+
+        # Collect unique hex boundary segments (clipped to triangle)
+        def _norm_edge(a, b):
+            a = tuple(round(float(x), 10) for x in np.asarray(a).flat)
+            b = tuple(round(float(x), 10) for x in np.asarray(b).flat)
+            return (a, b) if a <= b else (b, a)
+
+        seen = set()
+        all_edges = []
         for q in range(-limit, limit + 1):
             for r in range(-limit, limit + 1):
-                # axial to Cartesian for hex grid (pointy / class I orientation)
                 tx = child_side * (1.5 * q)
                 ty = child_side * (np.sqrt(3.0) / 2.0 * q + np.sqrt(3.0) * r)
-
-                # Rotate grid according to the total rotation
                 cx = tx * np.cos(total_rot_rad) - ty * np.sin(total_rot_rad)
                 cy = tx * np.sin(total_rot_rad) + ty * np.cos(total_rot_rad)
-
                 child_poly = get_hex_poly(cx, cy, child_side, orientation=total_rot_rad)
                 if not clip_region.intersects(child_poly):
                     continue
-
                 inter = clip_region.intersection(child_poly)
                 if inter.is_empty:
                     continue
-
-                # Handle possible MultiPolygon from the intersection
-                if isinstance(inter, Polygon):
-                    geoms = [inter]
-                else:
-                    geoms = list(inter.geoms)
-
+                geoms = [inter] if isinstance(inter, Polygon) else list(inter.geoms)
                 for g in geoms:
-                    gx, gy = g.exterior.xy
-                    ax.plot(gx, gy, color="black", lw=0.6, alpha=0.9, zorder=3)
+                    coords = list(g.exterior.coords)[:-1]
+                    for i in range(len(coords)):
+                        a, b = np.array(coords[i]), np.array(coords[(i + 1) % len(coords)])
+                        key = _norm_edge(a, b)
+                        if key not in seen:
+                            seen.add(key)
+                            all_edges.append((a, b))
+
+        # Classify and draw: thin first, then thick skeleton edges
+        for (a, b) in all_edges:
+            on_skeleton = False
+            for ref_a, ref_b in skeleton_refs:
+                if _segment_on_ref(a, b, ref_a, ref_b):
+                    on_skeleton = True
+                    break
+            lw = base_lw if on_skeleton else thin_lw
+            ax.plot([a[0], b[0]], [a[1], b[1]], color="black", lw=lw, alpha=0.9, zorder=3)
 
     ax.set_aspect("equal")
     ax.axis("off")
@@ -296,6 +392,6 @@ def plot_triangle_hex_classI(
 
 
 if __name__ == "__main__":
-    # Step 2 with additional outer boundary segments (blue in your sketch)
-    plot_triangle_hex_classI(aperture=4, step=3, draw_hex=False, draw_extras=True)
+    # Step 3: subdivision lines + hex tessellation like the reference image
+    plot_triangle_hex_classI(aperture=4, step=3, draw_hex=True, draw_extras=True)
 

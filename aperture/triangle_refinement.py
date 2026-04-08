@@ -100,5 +100,5 @@ def draw_triangle_grid(n=100, side=1.0, facecolor="#d8e9f8", edgecolor="black"):
 
 if __name__ == "__main__":
     # Example: n=4 → aperture = n^2 = 16
-    draw_triangle_grid(n=9, side=1.0)
+    draw_triangle_grid(n=4, side=1.0)
 
