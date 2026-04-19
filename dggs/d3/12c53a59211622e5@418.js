@@ -46,6 +46,14 @@ function _h3_0_shifted(FileAttachment){return(
   FileAttachment("h3_0_shifted.geojson").json()
 )}
 
+function _a5_grid_1_line(FileAttachment){return(
+  FileAttachment("a5_grid_1_line.geojson").json()
+)}
+
+function _a5_grid_4(FileAttachment){return(
+  FileAttachment("a5_grid_4.geojson").json()
+)}
+
 function _isea3h(FileAttachment){return(
 FileAttachment("isea3h.geojson").json()
 )}
@@ -82,8 +90,8 @@ function _fuller_point(FileAttachment){return(
 FileAttachment("fuller_point.geojson").json()
 )}
 
-function _3(map,projection,isea9r,isea9r_centroids,isea9r_1,isea4r_1,isea3h,isea7h_1,isea3h_1,point,landPoints,icosahedron,icosahedron_pole,fuller,fuller_point){return(
-map(projection, { ...projection.options, isea9r, isea9r_centroids, isea9r_1, isea4r_1, isea3h, isea7h_1, isea3h_1,point, landPoints, icosahedron, icosahedron_pole, fuller, fuller_point })
+function _3(map,projection,isea9r,isea9r_centroids,isea9r_1,isea4r_1,a5_grid_1_line,a5_grid_4,isea3h,isea7h_1,isea3h_1,point,landPoints,icosahedron,icosahedron_pole,fuller,fuller_point){return(
+map(projection, { ...projection.options, isea9r, isea9r_centroids, isea9r_1, isea4r_1, a5_grid_1_line, a5_grid_4, isea3h, isea7h_1, isea3h_1,point, landPoints, icosahedron, icosahedron_pole, fuller, fuller_point })
 )}
 
 function _4(md){return(
@@ -304,6 +312,8 @@ export default function define(runtime, observer) {
     ["isea9r_1.geojson", {url: new URL("./files/isea9r_1.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea4r_1.geojson", {url: new URL("./files/isea4r_1.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["h3_0_shifted.geojson", {url: new URL("./files/h3_0_shifted.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["a5_grid_1_line.geojson", {url: new URL("./files/a5_grid_1_line.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["a5_grid_4.geojson", {url: new URL("./files/a5_grid_4.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea3h.geojson", {url: new URL("./files/isea3h.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea7h_1.geojson", {url: new URL("./files/isea7h_1.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea3h_1.geojson", {url: new URL("./files/isea3h_1.geojson", import.meta.url), mimeType: "application/json", toString}],
@@ -323,6 +333,8 @@ export default function define(runtime, observer) {
   main.variable(observer("isea9r_1")).define("isea9r_1", ["FileAttachment"], _isea9r_1);
   main.variable(observer("isea4r_1")).define("isea4r_1", ["FileAttachment"], _isea4r_1);
   main.variable(observer("h3_0_shifted")).define("h3_0_shifted", ["FileAttachment"], _h3_0_shifted);
+  main.variable(observer("a5_grid_1_line")).define("a5_grid_1_line", ["FileAttachment"], _a5_grid_1_line);
+  main.variable(observer("a5_grid_4")).define("a5_grid_4", ["FileAttachment"], _a5_grid_4);
   main.variable(observer("isea3h")).define("isea3h", ["FileAttachment"], _isea3h);
   main.variable(observer("isea7h_1")).define("isea7h_1", ["FileAttachment"], _isea7h_1);
   main.variable(observer("isea3h_1")).define("isea3h_1", ["FileAttachment"], _isea3h_1);
@@ -332,7 +344,7 @@ export default function define(runtime, observer) {
   main.variable(observer("icosahedron_pole")).define("icosahedron_pole", ["FileAttachment"], _icosahedron_pole);
   main.variable(observer("fuller")).define("fuller", ["FileAttachment"], _fuller);
   main.variable(observer("fuller_point")).define("fuller_point", ["FileAttachment"], _fuller_point);
-  main.variable(observer()).define(["map","projection","isea9r","isea9r_centroids","isea9r_1","isea4r_1","isea3h","isea7h_1","isea3h_1","point","landPoints","icosahedron","icosahedron_pole","fuller","fuller_point"], _3);
+  main.variable(observer()).define(["map","projection","isea9r","isea9r_centroids","isea9r_1","isea4r_1","a5_grid_1_line","a5_grid_4","isea3h","isea7h_1","isea3h_1","point","landPoints","icosahedron","icosahedron_pole","fuller","fuller_point"], _3);
   main.variable(observer()).define(["md"], _4);
   main.variable(observer("projections")).define("projections", ["d3"], _projections);
   main.variable(observer("projectionInput")).define("projectionInput", ["Inputs","projections"], _projectionInput);

@@ -197,6 +197,8 @@ function mapcanvas(
     isea9r_centroids = null,
     isea9r_1 = null,
     isea4r_1 = null,
+    a5_grid_1_line = null,
+    a5_grid_4 = null,
     h3_0_shifted = null,
     isea3h = null,    
     isea7h_1 = null,
@@ -340,11 +342,35 @@ function mapcanvas(
     //     }
     //   });
     // }
-    if (isea4r_1 && isea4r_1.features && Array.isArray(isea4r_1.features)) {
-      context.strokeStyle = "red";
-      context.lineWidth = 2;
+    // if (isea4r_1 && isea4r_1.features && Array.isArray(isea4r_1.features)) {
+    //   context.strokeStyle = "red";
+    //   context.lineWidth = 2;
+    //   context.setLineDash([]);
+    //   isea4r_1.features.forEach(feature => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
+    // if (h3_0_shifted && h3_0_shifted.features && Array.isArray(h3_0_shifted.features)) {
+    //   context.strokeStyle = "#0000ff";
+    //   context.lineWidth = 2;
+    //   context.setLineDash([]);
+    //   h3_0_shifted.features.forEach(feature => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
+    if (a5_grid_1_line && a5_grid_1_line.features && Array.isArray(a5_grid_1_line.features)) {
+      context.strokeStyle = "#ff0000";
+      context.lineWidth = 1.5;
       context.setLineDash([]);
-      isea4r_1.features.forEach(feature => {
+      a5_grid_1_line.features.forEach((feature) => {
         if (feature && feature.geometry) {
           context.beginPath();
           path(feature);
@@ -352,11 +378,11 @@ function mapcanvas(
         }
       });
     }
-    if (h3_0_shifted && h3_0_shifted.features && Array.isArray(h3_0_shifted.features)) {
-      context.strokeStyle = "#0000ff";
-      context.lineWidth = 2;
+    if (a5_grid_4 && a5_grid_4.features && Array.isArray(a5_grid_4.features)) {
+      context.strokeStyle = "#008000";
+      context.lineWidth = 0.35;
       context.setLineDash([]);
-      h3_0_shifted.features.forEach(feature => {
+      a5_grid_4.features.forEach((feature) => {
         if (feature && feature.geometry) {
           context.beginPath();
           path(feature);
