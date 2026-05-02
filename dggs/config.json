@@ -1,5 +1,50 @@
 {
-    "layers": [       
+    "layers": [     
+        {
+            "name": "dggrid_isea4t_0",
+            "file": "dggrid_isea4t_0.geojson",
+            "color": "#ff0000",
+            "width": 6,
+            "attributes": [],
+            "transparency": 1.0,
+            "visible": true
+        },
+        {
+            "name": "dggrid_fuller4t_0",
+            "file": "dggrid_fuller4t_0.geojson",
+            "color": "#0000ff",
+            "width": 6,
+            "attributes": [],
+            "transparency": 1.0,
+            "visible": true
+        },
+        {
+            "name": "dggrid_isea4d_0",
+            "file": "dggrid_isea4d_0.geojson",
+            "color": "#cc6600",
+            "width": 5,
+            "attributes": [],
+            "transparency": 1.0,
+            "visible": true
+        },
+        {
+            "name": "dggrid_fuller4d_0",
+            "file": "dggrid_fuller4d_0.geojson",
+            "color": "#6600cc",
+            "width": 5,
+            "attributes": [],
+            "transparency": 1.0,
+            "visible": true
+        },
+        {
+            "name": "planetrisk_0",
+            "file": "planetrisk_0.geojson",
+            "color": "#ff0000",
+            "width": 6,
+            "attributes": [],
+            "transparency": 1.0,
+            "visible": true
+        },  
         {
             "name": "Antimeridian crossed",
             "file": "antimeridian.geojson",
@@ -10,7 +55,7 @@
         {
             "name": "Polygon crossed",
             "file": "antimeridian_crossed.geojson",
-            "color": "#0000FF"
+            "color": "#d3d3d3"
         },
 
         {
@@ -37,7 +82,6 @@
             "name": "H3 1",
             "file": "h3_grid_1.geojson",
             "color": "#676876",
-            "width": 2,
             "attributes": [
                 "h3"
             ],
@@ -228,7 +272,7 @@
             ],
             "transparency": 0.6
         },
-        {
+               {
             "name": "QTM",
             "file": "qtm_grid_5.geojson",
             "color": "#8a0870",

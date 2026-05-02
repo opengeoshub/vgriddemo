@@ -197,6 +197,13 @@ function mapcanvas(
     isea9r_centroids = null,
     isea9r_1 = null,
     isea4r_1 = null,
+    superfund_0 = null,
+    superfund_0_pentagon = null,
+    planetrisk_0 = null,
+    dggrid_isea4t_0 = null,
+    dggrid_fuller4t_0 = null,
+    dggrid_isea4d_0 = null,
+    dggrid_fuller4d_0 = null,
     a5_grid_1_line = null,
     a5_grid_4 = null,
     h3_0_shifted = null,
@@ -366,11 +373,24 @@ function mapcanvas(
     //     }
     //   });
     // }
-    if (a5_grid_1_line && a5_grid_1_line.features && Array.isArray(a5_grid_1_line.features)) {
+
+    if (superfund_0 && superfund_0.features && Array.isArray(superfund_0.features)) {
+      context.strokeStyle = "#0000ff"; 
+      context.lineWidth = 4;
+      context.setLineDash([]);
+      superfund_0.features.forEach((feature) => {
+        if (feature && feature.geometry) {
+          context.beginPath();
+          path(feature);
+          context.stroke();
+        }
+      });
+    }
+    if (superfund_0_pentagon && superfund_0_pentagon.features && Array.isArray(superfund_0_pentagon.features)) {
       context.strokeStyle = "#ff0000";
-      context.lineWidth = 1.5;
+      context.lineWidth = 6;
       context.setLineDash([]);
-      a5_grid_1_line.features.forEach((feature) => {
+      superfund_0_pentagon.features.forEach((feature) => {
         if (feature && feature.geometry) {
           context.beginPath();
           path(feature);
@@ -378,18 +398,91 @@ function mapcanvas(
         }
       });
     }
-    if (a5_grid_4 && a5_grid_4.features && Array.isArray(a5_grid_4.features)) {
-      context.strokeStyle = "#008000";
-      context.lineWidth = 0.35;
-      context.setLineDash([]);
-      a5_grid_4.features.forEach((feature) => {
-        if (feature && feature.geometry) {
-          context.beginPath();
-          path(feature);
-          context.stroke();
-        }
-      });
-    }
+ 
+    // if (planetrisk_0 && planetrisk_0.features && Array.isArray(planetrisk_0.features)) {
+    //   context.strokeStyle = "#ff0000";
+    //   context.lineWidth = 4;
+    //   context.setLineDash([]);
+    //   planetrisk_0.features.forEach((feature) => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
+    // if (dggrid_isea4t_0 && dggrid_isea4t_0.features && Array.isArray(dggrid_isea4t_0.features)) {
+    //   context.strokeStyle = "#ff0000";
+    //   context.lineWidth = 6;
+    //   context.setLineDash([]);
+    //   dggrid_isea4t_0.features.forEach((feature) => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
+    // if (dggrid_fuller4t_0 && dggrid_fuller4t_0.features && Array.isArray(dggrid_fuller4t_0.features)) {
+    //   context.strokeStyle = "#0000ff";
+    //   context.lineWidth = 6;
+    //   context.setLineDash([]);
+    //   dggrid_fuller4t_0.features.forEach((feature) => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
+    // if (dggrid_isea4d_0 && dggrid_isea4d_0.features && Array.isArray(dggrid_isea4d_0.features)) {
+    //   context.strokeStyle = "#cc6600";
+    //   context.lineWidth = 5;
+    //   context.setLineDash([]);
+    //   dggrid_isea4d_0.features.forEach((feature) => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
+    // if (dggrid_fuller4d_0 && dggrid_fuller4d_0.features && Array.isArray(dggrid_fuller4d_0.features)) {
+    //   context.strokeStyle = "#ff0000";
+    //   context.lineWidth = 6;
+    //   context.setLineDash([]);
+    //   dggrid_fuller4d_0.features.forEach((feature) => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
+    // if (a5_grid_1_line && a5_grid_1_line.features && Array.isArray(a5_grid_1_line.features)) {
+    //   context.strokeStyle = "#ff0000";
+    //   context.lineWidth = 1.5;
+    //   context.setLineDash([]);
+    //   a5_grid_1_line.features.forEach((feature) => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
+    // if (a5_grid_4 && a5_grid_4.features && Array.isArray(a5_grid_4.features)) {
+    //   context.strokeStyle = "#008000";
+    //   context.lineWidth = 0.35;
+    //   context.setLineDash([]);
+    //   a5_grid_4.features.forEach((feature) => {
+    //     if (feature && feature.geometry) {
+    //       context.beginPath();
+    //       path(feature);
+    //       context.stroke();
+    //     }
+    //   });
+    // }
 
     // if (point && point.features && Array.isArray(point.features)) {
     //   point.features.forEach(feature => {

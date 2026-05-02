@@ -42,6 +42,34 @@ function _isea4r_1(FileAttachment){return(
   FileAttachment("isea4r_1.geojson").json()
   )} 
 
+function _superfund_0(FileAttachment){return(
+  FileAttachment("superfund_0.geojson").json()
+)}
+
+function _superfund_0_pentagon(FileAttachment){return(
+  FileAttachment("superfund_0_pentagon.geojson").json()
+)}
+
+function _planetrisk_0(FileAttachment){return(
+  FileAttachment("planetrisk_0.geojson").json()
+)}
+
+function _dggrid_isea4t_0(FileAttachment){return(
+  FileAttachment("dggrid_isea4t_0.geojson").json()
+)}
+
+function _dggrid_fuller4t_0(FileAttachment){return(
+  FileAttachment("dggrid_fuller4t_0.geojson").json()
+)}
+
+function _dggrid_isea4d_0(FileAttachment){return(
+  FileAttachment("dggrid_isea4d_0.geojson").json()
+)}
+
+function _dggrid_fuller4d_0(FileAttachment){return(
+  FileAttachment("dggrid_fuller4d_0.geojson").json()
+)}
+
 function _h3_0_shifted(FileAttachment){return(
   FileAttachment("h3_0_shifted.geojson").json()
 )}
@@ -90,8 +118,8 @@ function _fuller_point(FileAttachment){return(
 FileAttachment("fuller_point.geojson").json()
 )}
 
-function _3(map,projection,isea9r,isea9r_centroids,isea9r_1,isea4r_1,a5_grid_1_line,a5_grid_4,isea3h,isea7h_1,isea3h_1,point,landPoints,icosahedron,icosahedron_pole,fuller,fuller_point){return(
-map(projection, { ...projection.options, isea9r, isea9r_centroids, isea9r_1, isea4r_1, a5_grid_1_line, a5_grid_4, isea3h, isea7h_1, isea3h_1,point, landPoints, icosahedron, icosahedron_pole, fuller, fuller_point })
+function _3(map,projection,isea9r,isea9r_centroids,isea9r_1,isea4r_1,superfund_0,superfund_0_pentagon,planetrisk_0,dggrid_isea4t_0,dggrid_fuller4t_0,dggrid_isea4d_0,dggrid_fuller4d_0,a5_grid_1_line,a5_grid_4,isea3h,isea7h_1,isea3h_1,point,landPoints,icosahedron,icosahedron_pole,fuller,fuller_point){return(
+map(projection, { ...projection.options, isea9r, isea9r_centroids, isea9r_1, isea4r_1, superfund_0, superfund_0_pentagon, planetrisk_0, dggrid_isea4t_0, dggrid_fuller4t_0, dggrid_isea4d_0, dggrid_fuller4d_0, a5_grid_1_line, a5_grid_4, isea3h, isea7h_1, isea3h_1,point, landPoints, icosahedron, icosahedron_pole, fuller, fuller_point })
 )}
 
 function _4(md){return(
@@ -281,10 +309,13 @@ function projectionInput2({ name, value }) {
     projections.map(({ name }) => name),
     {
       value, // this breaks because of valueof :(
-      valueof: (name) =>
-        Object.assign(m.get(name).value(), {
-          options: { name, ...m.get(name).options }
-        }),
+      valueof: (projectionName) => {
+        const entry = m && typeof m.get === "function" ? m.get(projectionName) : null;
+        if (!entry || typeof entry.value !== "function") return null;
+        return Object.assign(entry.value(), {
+          options: { name: projectionName, ...(entry.options || {}) }
+        });
+      },
       label: name
     }
   );
@@ -311,6 +342,13 @@ export default function define(runtime, observer) {
     ["isea9r_centroids.geojson", {url: new URL("./files/isea9r_centroids.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea9r_1.geojson", {url: new URL("./files/isea9r_1.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["isea4r_1.geojson", {url: new URL("./files/isea4r_1.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["superfund_0.geojson", {url: new URL("../superfund_0.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["superfund_0_pentagon.geojson", {url: new URL("../superfund_0_pentagon.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["planetrisk_0.geojson", {url: new URL("../planetrisk_0.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["dggrid_isea4t_0.geojson", {url: new URL("../dggrid_isea4t_0.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["dggrid_fuller4t_0.geojson", {url: new URL("../dggrid_fuller4t_0.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["dggrid_isea4d_0.geojson", {url: new URL("../dggrid_isea4d_0.geojson", import.meta.url), mimeType: "application/json", toString}],
+    ["dggrid_fuller4d_0.geojson", {url: new URL("../dggrid_fuller4d_0.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["h3_0_shifted.geojson", {url: new URL("./files/h3_0_shifted.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["a5_grid_1_line.geojson", {url: new URL("./files/a5_grid_1_line.geojson", import.meta.url), mimeType: "application/json", toString}],
     ["a5_grid_4.geojson", {url: new URL("./files/a5_grid_4.geojson", import.meta.url), mimeType: "application/json", toString}],
@@ -332,6 +370,13 @@ export default function define(runtime, observer) {
   main.variable(observer("isea9r_centroids")).define("isea9r_centroids", ["FileAttachment"], _isea9r_centroids);
   main.variable(observer("isea9r_1")).define("isea9r_1", ["FileAttachment"], _isea9r_1);
   main.variable(observer("isea4r_1")).define("isea4r_1", ["FileAttachment"], _isea4r_1);
+  main.variable(observer("superfund_0")).define("superfund_0", ["FileAttachment"], _superfund_0);
+  main.variable(observer("superfund_0_pentagon")).define("superfund_0_pentagon", ["FileAttachment"], _superfund_0_pentagon);
+  main.variable(observer("planetrisk_0")).define("planetrisk_0", ["FileAttachment"], _planetrisk_0);
+  main.variable(observer("dggrid_isea4t_0")).define("dggrid_isea4t_0", ["FileAttachment"], _dggrid_isea4t_0);
+  main.variable(observer("dggrid_fuller4t_0")).define("dggrid_fuller4t_0", ["FileAttachment"], _dggrid_fuller4t_0);
+  main.variable(observer("dggrid_isea4d_0")).define("dggrid_isea4d_0", ["FileAttachment"], _dggrid_isea4d_0);
+  main.variable(observer("dggrid_fuller4d_0")).define("dggrid_fuller4d_0", ["FileAttachment"], _dggrid_fuller4d_0);
   main.variable(observer("h3_0_shifted")).define("h3_0_shifted", ["FileAttachment"], _h3_0_shifted);
   main.variable(observer("a5_grid_1_line")).define("a5_grid_1_line", ["FileAttachment"], _a5_grid_1_line);
   main.variable(observer("a5_grid_4")).define("a5_grid_4", ["FileAttachment"], _a5_grid_4);
@@ -344,7 +389,7 @@ export default function define(runtime, observer) {
   main.variable(observer("icosahedron_pole")).define("icosahedron_pole", ["FileAttachment"], _icosahedron_pole);
   main.variable(observer("fuller")).define("fuller", ["FileAttachment"], _fuller);
   main.variable(observer("fuller_point")).define("fuller_point", ["FileAttachment"], _fuller_point);
-  main.variable(observer()).define(["map","projection","isea9r","isea9r_centroids","isea9r_1","isea4r_1","a5_grid_1_line","a5_grid_4","isea3h","isea7h_1","isea3h_1","point","landPoints","icosahedron","icosahedron_pole","fuller","fuller_point"], _3);
+  main.variable(observer()).define(["map","projection","isea9r","isea9r_centroids","isea9r_1","isea4r_1","superfund_0","superfund_0_pentagon","planetrisk_0","dggrid_isea4t_0","dggrid_fuller4t_0","dggrid_isea4d_0","dggrid_fuller4d_0","a5_grid_1_line","a5_grid_4","isea3h","isea7h_1","isea3h_1","point","landPoints","icosahedron","icosahedron_pole","fuller","fuller_point"], _3);
   main.variable(observer()).define(["md"], _4);
   main.variable(observer("projections")).define("projections", ["d3"], _projections);
   main.variable(observer("projectionInput")).define("projectionInput", ["Inputs","projections"], _projectionInput);
