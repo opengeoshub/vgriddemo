@@ -101,12 +101,12 @@
         {
             "name": "HEALPIX 2",
             "file": "healpix_2.geojson",
-            "color": "#FF0000",
-            "width": 2,
+            "color": "#0000FF",
+            "lineType": "dash",
+            "width": 4,
             "attributes": [
                 "healpix"
-            ],
-            "transparency": 0.6
+            ]
         },
         {
             "name": "HEALPIX 1_Z_CURVE",
@@ -137,6 +137,17 @@
             "attributes": [
                 "healpix"
             ]
+        },
+          {
+            "name": "HEALPIX 3",
+            "file": "healpix_3.geojson",
+            "color": "#FF0000",
+            "width": 2,
+            "attributes": [
+                "healpix"
+            ],
+            "transparency": 0.6
+
         },
     
         {
@@ -255,16 +266,34 @@
             "transparency": 0.5
         },
         {
-            "name": "Rhealpix",
-            "file": "rhealpix_grid_3.geojson",
+            "name": "rHEALPix 2",
+            "file": "rhealpix_grid_2.geojson",
             "color": "#9621a3",
+            "width": 4,
             "attributes": [
                 "rhealpix"
-            ],
-            "transparency": 0.6
+            ]
         },
         {
-            "name": "ISEA4T",
+            "name": "ISEA4T 1",
+            "file": "isea4t_grid_1.geojson",
+            "color": "#0000FF",
+            "lineType": "dash",
+            "width": 4,
+            "attributes": [
+                "isea4t"
+            ]
+        },
+        {
+            "name": "ISEA4T 2",
+            "file": "isea4t_grid_2.geojson",
+            "color": "#de6b00",
+            "attributes": [
+                "isea4t"
+            ]
+        },
+        {
+            "name": "ISEA4T 4",
             "file": "isea4t_grid_4.geojson",
             "color": "#de6b00",
             "attributes": [
@@ -272,8 +301,18 @@
             ],
             "transparency": 0.6
         },
-               {
-            "name": "QTM",
+        {
+            "name": "QTM 4",
+            "file": "qtm_grid_4.geojson",
+            "color": "#0000FF",
+            "attributes": [
+                "qtm"
+            ],
+            "width": 4,
+            "lineType": "dash"
+        },
+        {
+            "name": "QTM 5",
             "file": "qtm_grid_5.geojson",
             "color": "#8a0870",
             "attributes": [
@@ -337,13 +376,22 @@
             "transparency": 0.6
         },
         {
-            "name": "Tilecode",
-            "file": "tile_grid_6.geojson",
+            "name": "Tilecode 5",
+            "file": "tile_grid_5.geojson",
             "color": "red",
+            "width": 3,
             "attributes": [
                 "Tilecode"
-            ],
-            "transparency": 0.6
+            ]
+        },
+         {
+            "name": "GNOSIS 4",
+            "file": "gnosis_4.geojson",
+            "color": "#0000FF",
+            "width": 3,
+            "attributes": [
+                "Tilecode"
+            ]
         },
         {
             "name": "tetrahedron",
